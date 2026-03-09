@@ -27,7 +27,7 @@ def analyze():
                    content 
                    source 
                    visibility 
-                   contentUrl
+                   contentsUrl
                }
            }
         }
