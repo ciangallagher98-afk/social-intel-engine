@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsightFlow AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-6">
+    <div class="max-w-xl w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
+        <h1 class="text-3xl font-bold mb-2 text-blue-400">🌐 InsightFlow AI</h1>
+        <p class="text-slate-400 mb-8">Universal Social Listening Dashboard</p>
+
+        <div class="space-y-4">
+            <input id="p_token" type="password" placeholder="Pulsar API Token" class="w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-blue-500">
+            <input id="g_key" type="password" placeholder="Groq API Key" class="w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-blue-500">
+            <input id="s_id" type="text" placeholder="Pulsar Search ID" class="w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-blue-500">
+            <textarea id="prompt" rows="3" class="w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-blue-500">Analyze the brand sentiment and top 3 occasions.</textarea>
+            
+            <button onclick="startAnalysis()" id="btn" class="w-full py-4 bg-blue-600 hover:bg-blue-500 font-bold rounded-xl transition-all">🔥 Launch Analysis</button>
+        </div>
+
+        <div id="output" class="mt-8 p-4 bg-slate-900 rounded hidden border border-slate-700 text-slate-300 whitespace-pre-wrap"></div>
+    </div>
+
+    <script>
+        async function startAnalysis() {
+            const btn = document.getElementById('btn');
+            const out = document.getElementById('output');
+            btn.innerText = "⌛ Processing...";
+            btn.disabled = true;
+
+            const payload = {
+                pulsar_token: document.getElementById('p_token').value,
+                groq_key: document.getElementById('g_key').value,
+                search_id: document.getElementById('s_id').value,
+                prompt: document.getElementById('prompt').value
+            };
+
+            try {
+                const res = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const result = await res.json();
+                out.classList.remove('hidden');
+                out.innerText = result.report || result.error;
+            } catch (e) {
+                alert("Critical Error: " + e);
+            } finally {
+                btn.innerText = "🔥 Launch Analysis";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
