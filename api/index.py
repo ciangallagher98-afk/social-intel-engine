@@ -22,7 +22,7 @@ def analyze():
         query = """
         query GetResults($filters:FilterInput!){
            results (filter:$filters){
-               results { content, source, visibility, contentUrl }
+               results { content, source, visibility }
            }
         }
         """
