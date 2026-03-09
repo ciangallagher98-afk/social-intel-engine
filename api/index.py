@@ -19,16 +19,10 @@ def analyze():
         p_start = f"{date_from}T00:00:00Z"
         p_end = f"{date_to}T23:59:59Z"
 
-        # UPDATED QUERY: Added visibility and contentUrl
         query = """
         query GetResults($filters:FilterInput!){
            results (filter:$filters){
-               results { 
-                   content 
-                   source 
-                   visibility 
-                   contentsUrl
-               }
+               results { content, source, visibility, contentUrl }
            }
         }
         """
@@ -41,27 +35,24 @@ def analyze():
         posts = pulsar_res.json().get('data', {}).get('results', {}).get('results', [])
 
         if not posts:
-            return jsonify({"error": "No data found."}), 404
+            return jsonify({"error": "No data found in Pulsar for this range."}), 404
 
-        # Prepare data for AI - keeping visibility for context
-        context_items = []
-        for p in posts[:50]: # Increased to 50 for better evidence selection
-            context_items.append({
-                "text": p.get('content')[:200],
-                "impact": p.get('visibility', 0),
-                "url": p.get('contentUrl', '')
-            })
+        # Context for AI
+        context_items = [{"text": p.get('content')[:180], "impact": p.get('visibility', 0), "url": p.get('contentUrl', '')} for p in posts[:50]]
 
         client = Groq(api_key=g_key)
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """Analyze data and return JSON. 
-                Identify categories. For each category, provide:
-                1. 'name', 'count', 'boolean'
-                2. 'impact_score': Average visibility for this category.
-                3. 'evidence': The URL of the single most representative/high-impact post."""},
+                {"role": "system", "content": """Return ONLY a JSON object with this EXACT structure:
+                {
+                  "summary": "text",
+                  "categories": [
+                    { "name": "text", "count": 0, "boolean": "text", "impact_score": 0, "evidence": "url" }
+                  ]
+                }
+                If no categories are found, return "categories": []."""},
                 {"role": "user", "content": f"Task: {user_prompt}\n\nData: {json.dumps(context_items)}"}
             ]
         )
