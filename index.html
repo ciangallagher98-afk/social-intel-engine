@@ -5,51 +5,129 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InsightFlow AI</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .placeholder-cycle { animation: fade 3s infinite; }
+        @keyframes fade { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+    </style>
 </head>
-<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-6">
-    <div class="max-w-xl w-full bg-slate-800 p-8 rounded-2xl shadow-2xl border border-slate-700">
-        <h1 class="text-3xl font-bold mb-2 text-blue-400">🌐 InsightFlow AI</h1>
-        <p class="text-slate-400 mb-8">Universal Social Listening Dashboard</p>
-
-        <div class="space-y-4">
-            <input id="p_token" type="password" placeholder="Pulsar API Token" class="w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-blue-500">
-            <input id="g_key" type="password" placeholder="Groq API Key" class="w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-blue-500">
-            <input id="s_id" type="text" placeholder="Pulsar Search ID" class="w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-blue-500">
-            <textarea id="prompt" rows="3" class="w-full p-3 rounded bg-slate-700 border border-slate-600 focus:outline-none focus:border-blue-500">Analyze the brand sentiment and top 3 occasions.</textarea>
-            
-            <button onclick="startAnalysis()" id="btn" class="w-full py-4 bg-blue-600 hover:bg-blue-500 font-bold rounded-xl transition-all">🔥 Launch Analysis</button>
+<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-6 font-sans">
+    <div class="max-w-2xl w-full bg-slate-800 p-8 rounded-3xl shadow-2xl border border-slate-700">
+        
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">InsightFlow AI</h1>
+                <p class="text-slate-400 text-sm">Universal Social Listening Engine</p>
+            </div>
+            <div class="text-xs bg-slate-700 px-3 py-1 rounded-full text-slate-300 border border-slate-600">v2.1 Stable</div>
         </div>
 
-        <div id="output" class="mt-8 p-4 bg-slate-900 rounded hidden border border-slate-700 text-slate-300 whitespace-pre-wrap"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="space-y-4">
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Access Keys</label>
+                <input id="p_token" type="password" placeholder="Pulsar API Token" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                <input id="g_key" type="password" placeholder="Groq API Key" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+            </div>
+            <div class="space-y-4">
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Parameters</label>
+                <input id="s_id" type="text" placeholder="Pulsar Search ID" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                <div class="flex gap-2">
+                    <input id="date_from" type="date" class="w-1/2 p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-300">
+                    <input id="date_to" type="date" class="w-1/2 p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-300">
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-2 mb-8">
+            <div class="flex justify-between items-center">
+                <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Analysis Strategy</label>
+                <span id="example-hint" class="text-[10px] text-blue-400 italic">Try: "Identify top 3 consumer occasions"</span>
+            </div>
+            <textarea id="prompt" rows="4" 
+                placeholder="Click here to enter your custom prompt..." 
+                class="w-full p-4 rounded-2xl bg-slate-900 border border-slate-700 focus:ring-2 focus:ring-blue-500 outline-none transition-all text-slate-300 italic"></textarea>
+        </div>
+
+        <button onclick="startAnalysis()" id="btn" class="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 font-bold rounded-2xl shadow-lg transform active:scale-[0.98] transition-all">
+            🔥 Launch Intelligence Engine
+        </button>
+
+        <div id="output" class="mt-8 p-6 bg-slate-900 rounded-2xl hidden border border-slate-700 text-slate-300 leading-relaxed max-h-96 overflow-y-auto custom-scrollbar">
+            <div id="spinner" class="animate-pulse flex space-x-4">
+                <div class="flex-1 space-y-4 py-1">
+                    <div class="h-4 bg-slate-700 rounded w-3/4"></div>
+                    <div class="space-y-2">
+                        <div class="h-4 bg-slate-700 rounded"></div>
+                        <div class="h-4 bg-slate-700 rounded w-5/6"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="report-content" class="whitespace-pre-wrap"></div>
+        </div>
     </div>
 
     <script>
+        // --- 🚲 PROMPT CYCLER ---
+        const examples = [
+            "Identify top 3 consumer occasions mentioned",
+            "Analyze brand sentiment and competitive mentions",
+            "Extract emerging flavor or product trends",
+            "Highlight common complaints or friction points"
+        ];
+        let i = 0;
+        setInterval(() => {
+            if (document.activeElement !== document.getElementById('prompt')) {
+                document.getElementById('example-hint').innerText = "Try: " + examples[i % examples.length];
+                i++;
+            }
+        }, 3000);
+
+        // Clear placeholder logic
+        const promptArea = document.getElementById('prompt');
+        promptArea.addEventListener('focus', () => {
+            promptArea.placeholder = "";
+            promptArea.classList.remove('italic');
+        });
+        promptArea.addEventListener('blur', () => {
+            if(promptArea.value === "") {
+                promptArea.placeholder = "Click here to enter your custom prompt...";
+                promptArea.classList.add('italic');
+            }
+        });
+
+        // --- 🚀 ANALYSIS LOGIC ---
         async function startAnalysis() {
             const btn = document.getElementById('btn');
             const out = document.getElementById('output');
-            btn.innerText = "⌛ Processing...";
+            const content = document.getElementById('report-content');
+            
+            btn.innerText = "⏳ Gathering Intelligence...";
             btn.disabled = true;
+            out.classList.remove('hidden');
+            content.innerText = "";
+            document.getElementById('spinner').classList.remove('hidden');
 
             const payload = {
                 pulsar_token: document.getElementById('p_token').value,
                 groq_key: document.getElementById('g_key').value,
                 search_id: document.getElementById('s_id').value,
+                date_from: document.getElementById('date_from').value,
+                date_to: document.getElementById('date_to').value,
                 prompt: document.getElementById('prompt').value
             };
 
             try {
-                const res = await fetch('/api'), {
+                const res = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
                 const result = await res.json();
-                out.classList.remove('hidden');
-                out.innerText = result.report || result.error;
+                document.getElementById('spinner').classList.add('hidden');
+                content.innerText = result.report || result.error;
             } catch (e) {
-                alert("Critical Error: " + e);
+                content.innerText = "Critical Error: " + e;
             } finally {
-                btn.innerText = "🔥 Launch Analysis";
+                btn.innerText = "🔥 Launch Intelligence Engine";
                 btn.disabled = false;
             }
         }
