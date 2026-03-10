@@ -13,23 +13,13 @@ def analyze():
         g_key = data.get('groq_key')
         s_id = str(data.get('search_id'))
         
-        # ISO 8601 formatting for Pulsar TRAC
         p_start = f"{data.get('date_from')}T00:00:00Z"
         p_end = f"{data.get('date_to')}T23:59:59Z"
 
-        # Corrected Schema: url and publishedAt included
         query = """
         query GetResults($filters:FilterInput!){
            results (filter:$filters){
-               results { 
-                   content 
-                   visibility 
-                   sentiment 
-                   emotion 
-                   engagement 
-                   url 
-                   publishedAt 
-               }
+               results { content visibility engagement url publishedAt source }
            }
         }
         """
@@ -41,42 +31,30 @@ def analyze():
             headers={"Authorization": f"Bearer {p_token}", "Content-Type": "application/json"}
         )
         
-        p_json = pulsar_res.json()
-        if 'errors' in p_json:
-            return jsonify({"error": p_json['errors'][0]['message']}), 400
+        posts = pulsar_res.json().get('data', {}).get('results', {}).get('results', [])
+        if not posts: return jsonify({"error": "No data found."}), 404
 
-        posts = p_json.get('data', {}).get('results', {}).get('results', [])
-        if not posts:
-            return jsonify({"error": "No data found for this range."}), 404
+        # Calculate SOV before slicing
+        sources = [p.get('source', 'Unknown') for p in posts]
+        sov = {s: round((sources.count(s) / len(sources)) * 100) for s in set(sources)}
 
-        # Rank by Visibility/Impact for the AI
+        # Sort by impact and send the most important context
         sorted_posts = sorted(posts, key=lambda x: x.get('visibility', 0), reverse=True)
-
-        context_items = [{
-            "text": p.get('content', '')[:250], 
-            "impact": p.get('visibility', 0), 
-            "eng": p.get('engagement', 0),
-            "date": p.get('publishedAt'),
-            "url": p.get('url', '')
-        } for p in sorted_posts[:45]] # High-density context
+        context = [{"text": p.get('content')[:200], "impact": p.get('visibility'), "src": p.get('source'), "date": p.get('publishedAt')} for p in sorted_posts[:50]]
 
         client = Groq(api_key=g_key)
-        completion = client.chat.completions.create(
+        completion = client.chat.create(
             model="llama-3.3-70b-versatile",
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """You are a Strategic Data Analyst. 
-                Identify 4-5 core themes/events.
-                Return JSON: {
-                    "executive_summary": "Overall narrative and temporal trends",
-                    "themes": [
-                        {"title": "Theme Name", "summary": "Explanation", "top_post_url": "URL", "impact_level": 1-100, "key_driver": "Factor"}
-                    ]
-                }"""},
-                {"role": "user", "content": f"Query: {data.get('prompt')}\n\nData: {json.dumps(context_items)}"}
+                {"role": "system", "content": "You are a Strategy Consultant. Return JSON: {executive_summary, themes: [{title, summary, impact_level, offensive_play, defensive_play}]}"},
+                {"role": "user", "content": f"User Goal: {data.get('prompt')}\n\nData: {json.dumps(context)}"}
             ]
         )
+        
+        result = json.loads(completion.choices[0].message.content)
+        result['sov'] = sov # Attach SOV data for the UI
+        return jsonify(result)
 
-        return jsonify(json.loads(completion.choices[0].message.content))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
