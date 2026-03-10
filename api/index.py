@@ -13,13 +13,23 @@ def analyze():
         g_key = data.get('groq_key')
         s_id = str(data.get('search_id'))
         
+        # ISO 8601 formatting for Pulsar TRAC
         p_start = f"{data.get('date_from')}T00:00:00Z"
         p_end = f"{data.get('date_to')}T23:59:59Z"
 
+        # Corrected Schema: url and publishedAt included
         query = """
         query GetResults($filters:FilterInput!){
            results (filter:$filters){
-               results { content visibility sentiment emotion engagement url publishedAt }
+               results { 
+                   content 
+                   visibility 
+                   sentiment 
+                   emotion 
+                   engagement 
+                   url 
+                   publishedAt 
+               }
            }
         }
         """
@@ -37,9 +47,9 @@ def analyze():
 
         posts = p_json.get('data', {}).get('results', {}).get('results', [])
         if not posts:
-            return jsonify({"error": "No data found."}), 404
+            return jsonify({"error": "No data found for this range."}), 404
 
-        # 1. Sort posts by Visibility (highest impact first)
+        # Rank by Visibility/Impact for the AI
         sorted_posts = sorted(posts, key=lambda x: x.get('visibility', 0), reverse=True)
 
         context_items = [{
@@ -48,23 +58,22 @@ def analyze():
             "eng": p.get('engagement', 0),
             "date": p.get('publishedAt'),
             "url": p.get('url', '')
-        } for p in sorted_posts[:40]] # Top 40 high-impact posts
+        } for p in sorted_posts[:45]] # High-density context
 
         client = Groq(api_key=g_key)
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": """You are a Pulsar Data Analyst. 
-                Identify the 4 most important themes/trends from the data.
-                For each theme, provide:
-                1. A 'title' (The Theme Name)
-                2. A 'summary' (What happened and why)
-                3. The 'top_post_url' (The URL of the most relevant post from the data)
-                4. An 'impact_level' (1-100)
-                5. The 'key_driver' (What caused this theme)
-                Return as JSON with a global 'executive_summary' and a 'themes' array."""},
-                {"role": "user", "content": f"User Request: {data.get('prompt')}\n\nData: {json.dumps(context_items)}"}
+                {"role": "system", "content": """You are a Strategic Data Analyst. 
+                Identify 4-5 core themes/events.
+                Return JSON: {
+                    "executive_summary": "Overall narrative and temporal trends",
+                    "themes": [
+                        {"title": "Theme Name", "summary": "Explanation", "top_post_url": "URL", "impact_level": 1-100, "key_driver": "Factor"}
+                    ]
+                }"""},
+                {"role": "user", "content": f"Query: {data.get('prompt')}\n\nData: {json.dumps(context_items)}"}
             ]
         )
 
