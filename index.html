@@ -2,70 +2,79 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pulsar Pro | Strategic Command</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulsar Pro | Strategy</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111; }
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111; -webkit-font-smoothing: antialiased; }
         .ikea-blue { background-color: #0058a3; }
         .ikea-text { color: #0058a3; }
-        .border-soft { border-color: #f2f2f2; }
+        .border-soft { border-color: #f1f1f1; }
+        .transition-ease { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="p-6 md:p-16">
+<body class="p-6 md:p-20">
     <div class="max-w-6xl mx-auto">
-        <header class="flex justify-between items-center mb-16 border-b border-soft pb-10">
-            <h1 class="text-2xl font-black tracking-tighter ikea-text uppercase italic">Pulsar <span class="text-gray-200 font-normal not-italic">Pro</span></h1>
-            <span class="text-[9px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 uppercase tracking-widest">Multi-Source Active</span>
+        <header class="flex justify-between items-baseline mb-20 border-b border-soft pb-10">
+            <h1 class="text-3xl font-black tracking-tighter ikea-text uppercase italic">Pulsar <span class="text-gray-200 font-normal not-italic lowercase">Pro</span></h1>
+            <div class="flex items-center gap-3">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.3em]">Strategy Engine Active</span>
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-16">
-            <aside class="lg:col-span-1 space-y-10">
-                <div class="space-y-4">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Connection</label>
-                    <input id="p_token" type="password" placeholder="Pulsar Token" class="w-full p-4 border border-soft rounded-lg text-sm outline-none focus:border-blue-500">
-                    <input id="g_key" type="password" placeholder="Groq Key" class="w-full p-4 border border-soft rounded-lg text-sm outline-none focus:border-blue-500">
-                    <input id="s_id" type="text" placeholder="Search UID" class="w-full p-4 border border-soft rounded-lg text-sm outline-none focus:border-blue-500">
-                </div>
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-20">
+            <aside class="lg:col-span-1 space-y-12">
+                <section class="space-y-4">
+                    <label class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Setup</label>
+                    <input id="p_token" type="password" placeholder="Pulsar Token" class="w-full p-4 border border-soft rounded-xl text-sm outline-none focus:border-blue-500 transition-all">
+                    <input id="g_key" type="password" placeholder="Groq Key" class="w-full p-4 border border-soft rounded-xl text-sm outline-none focus:border-blue-500 transition-all">
+                    <input id="s_id" type="text" placeholder="Search UID" class="w-full p-4 border border-soft rounded-xl text-sm outline-none focus:border-blue-500 transition-all">
+                </section>
 
-                <div class="space-y-4">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Timeframe</label>
-                    <select id="date_preset" onchange="toggleDate()" class="w-full p-4 bg-gray-50 border border-soft rounded-lg text-sm outline-none">
+                <section class="space-y-4">
+                    <label class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Report Period</label>
+                    <select id="date_preset" onchange="toggleDate()" class="w-full p-4 bg-gray-50 border border-soft rounded-xl text-sm outline-none appearance-none cursor-pointer">
                         <option value="1">Yesterday</option>
                         <option value="7" selected>Last 7 Days</option>
+                        <option value="30">Last 30 Days</option>
                         <option value="qtd">Quarter to Date</option>
                         <option value="ytd">Year to Date</option>
-                        <option value="custom">Custom...</option>
+                        <option value="custom">Custom Range...</option>
                     </select>
-                    <div id="custom_ui" class="hidden space-y-2">
-                        <input id="date_from" type="date" class="w-full p-3 border border-soft rounded-lg text-xs">
-                        <input id="date_to" type="date" class="w-full p-3 border border-soft rounded-lg text-xs">
+                    <div id="custom_ui" class="hidden grid grid-cols-2 gap-2 pt-2">
+                        <input id="date_from" type="date" class="p-2 border border-soft rounded text-[10px]">
+                        <input id="date_to" type="date" class="p-2 border border-soft rounded text-[10px]">
                     </div>
-                </div>
+                </section>
 
-                <button onclick="run()" id="btn" class="w-full py-5 ikea-blue text-white font-bold text-[10px] tracking-widest rounded-lg hover:opacity-90 uppercase transition-all">Generate Strategy</button>
+                <button onclick="run()" id="btn" class="w-full py-5 ikea-blue text-white font-bold text-[10px] tracking-widest rounded-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 transition-ease uppercase">Generate Strategy</button>
             </aside>
 
             <main class="lg:col-span-3">
-                <textarea id="prompt" rows="2" class="w-full text-4xl font-light border-none focus:ring-0 outline-none placeholder-gray-100 mb-10" placeholder="Analyze themes from all sources..."></textarea>
-
-                <div id="sov_container" class="hidden mb-12">
-                    <h4 class="text-[9px] font-bold text-gray-300 uppercase mb-4 tracking-widest">Share of Voice by Source</h4>
-                    <div id="sov_bar" class="flex w-full h-8 rounded-lg overflow-hidden bg-gray-50"></div>
+                <div class="mb-16">
+                    <textarea id="prompt" rows="2" class="w-full text-4xl font-light border-none focus:ring-0 outline-none placeholder-gray-100 leading-tight" placeholder="What is our focus?"></textarea>
                 </div>
 
-                <div id="output" class="hidden space-y-20">
-                    <div>
-                        <h4 class="text-[9px] font-bold text-gray-300 uppercase mb-6 tracking-widest">Executive Summary</h4>
+                <div id="sov_container" class="hidden mb-16 animate-fadeIn">
+                    <h4 class="text-[9px] font-bold text-gray-300 uppercase mb-4 tracking-widest">Share of Voice by Channel</h4>
+                    <div id="sov_bar" class="flex w-full h-10 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 shadow-sm"></div>
+                </div>
+
+                <div id="output" class="hidden space-y-24">
+                    <div class="max-w-2xl">
+                        <h4 class="text-[9px] font-bold text-gray-300 uppercase mb-6 tracking-widest">Strategic Outlook</h4>
                         <p id="sum-text" class="text-2xl text-gray-800 font-light leading-snug italic"></p>
                     </div>
-                    <div id="grid" class="grid grid-cols-1 gap-12"></div>
+                    <div id="grid" class="grid grid-cols-1 gap-20"></div>
                 </div>
             </main>
         </div>
     </div>
 
     <script>
+        // Store user keys for session
         ['p_token', 'g_key', 's_id'].forEach(id => {
             const val = sessionStorage.getItem(id);
             if(val) document.getElementById(id).value = val;
@@ -78,6 +87,7 @@
             const btn = document.getElementById('btn');
             btn.disabled = true;
 
+            // Date Calculation Logic
             const preset = document.getElementById('date_preset').value;
             let f = new Date(); let t = new Date();
             if(preset === '1') { f.setDate(f.getDate()-1); t.setDate(t.getDate()-1); }
@@ -96,23 +106,23 @@
                         search_id: document.getElementById('s_id').value,
                         date_from: f.toISOString().split('T')[0],
                         date_to: t.toISOString().split('T')[0],
-                        prompt: document.getElementById('prompt').value || "General Strategy"
+                        prompt: document.getElementById('prompt').value || "Analyze themes and strategy"
                     })
                 });
 
                 const data = await res.json();
                 if(data.error) throw new Error(data.error);
 
-                // Render SOV
+                // Render SOV Bar
                 const sovBar = document.getElementById('sov_bar');
                 sovBar.innerHTML = "";
-                const colors = ['#0058a3', '#007cc3', '#409ad0', '#80bce0'];
+                const colors = ['#0058a3', '#007cc3', '#409ad0', '#80bce0', '#b3d1eb'];
                 Object.entries(data.sov).forEach(([name, val], i) => {
                     const seg = document.createElement('div');
                     seg.style.width = val + '%';
                     seg.style.backgroundColor = colors[i % colors.length];
-                    seg.className = "flex items-center justify-center text-[8px] font-bold text-white uppercase";
-                    seg.innerHTML = `<span>${name}</span>`;
+                    seg.className = "flex items-center justify-center text-[8px] font-bold text-white uppercase whitespace-nowrap px-2";
+                    seg.innerHTML = `<span>${name} ${val}%</span>`;
                     sovBar.appendChild(seg);
                 });
                 document.getElementById('sov_container').classList.remove('hidden');
@@ -123,19 +133,29 @@
                 grid.innerHTML = "";
                 data.themes.forEach(theme => {
                     const card = document.createElement('div');
-                    card.className = "border-l-2 border-gray-100 pl-8 py-2";
+                    card.className = "border-l-4 border-gray-100 pl-10 py-2 hover:border-blue-600 transition-ease group";
                     card.innerHTML = `
-                        <h5 class="text-xl font-bold mb-4">${theme.title}</h5>
-                        <p class="text-gray-500 font-light mb-8 max-w-3xl">${theme.summary}</p>
-                        <div class="grid grid-cols-2 gap-8 bg-gray-50 p-6 rounded-lg">
-                            <div><span class="text-[8px] font-bold text-emerald-600 uppercase block mb-2">Offensive</span><p class="text-[11px] italic">${theme.offensive_play}</p></div>
-                            <div><span class="text-[8px] font-bold text-rose-600 uppercase block mb-2">Defensive</span><p class="text-[11px] italic">${theme.defensive_play}</p></div>
+                        <div class="flex justify-between items-baseline mb-6">
+                            <h5 class="text-2xl font-bold tracking-tight">${theme.title}</h5>
+                            <span class="text-[10px] font-black ikea-text bg-blue-50 px-3 py-1 uppercase tracking-widest italic">Priority ${theme.impact_score}%</span>
+                        </div>
+                        <p class="text-gray-500 font-light text-lg mb-10 max-w-3xl leading-relaxed">${theme.summary}</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 bg-gray-50/50 p-8 rounded-2xl border border-gray-50 group-hover:bg-blue-50/20 transition-ease">
+                            <div class="space-y-3">
+                                <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest block">Offensive Strategy</span>
+                                <p class="text-xs text-gray-700 italic border-l-2 border-emerald-200 pl-4 leading-relaxed">${theme.offensive_play}</p>
+                            </div>
+                            <div class="space-y-3">
+                                <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest block">Defensive Strategy</span>
+                                <p class="text-xs text-gray-700 italic border-l-2 border-rose-200 pl-4 leading-relaxed">${theme.defensive_play}</p>
+                            </div>
                         </div>
                     `;
                     grid.appendChild(card);
                 });
 
                 document.getElementById('output').classList.remove('hidden');
+                window.scrollTo({ top: 400, behavior: 'smooth' });
             } catch (e) { alert(e.message); }
             finally { btn.disabled = false; }
         }
