@@ -100,15 +100,19 @@
             const q = document.getElementById('query').value;
             const hist = document.getElementById('history');
             if(!q) return;
-            hist.innerHTML += `<div class="text-right"><span class="bg-blue-900/20 p-3 rounded-lg border border-blue-900/30 text-sm inline-block">${q}</span></div>`;
+            hist.innerHTML += `<div class="text-right"><span class="bg-blue-900/20 p-3 rounded-lg border border-blue-900/30 text-sm inline-block text-blue-100">${q}</span></div>`;
             document.getElementById('query').value = "";
+            
+            // Auto scroll to bottom
+            hist.scrollTop = hist.scrollHeight;
+
             const res = await fetch('/api/ask', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ search_id: document.getElementById('s_id').value, groq_key: document.getElementById('g_key').value, question: q })
             });
             const data = await res.json();
-            hist.innerHTML += `<div class="text-left"><div class="bg-white/5 p-4 rounded-lg border border-white/10 text-sm text-gray-300">${data.answer.replace(/\n/g, '<br>')}</div></div>`;
+            hist.innerHTML += `<div class="text-left"><div class="bg-white/5 p-4 rounded-lg border border-white/10 text-sm text-gray-300 leading-relaxed font-light prose prose-invert">${data.answer.replace(/\n/g, '<br>')}</div></div>`;
             hist.scrollTop = hist.scrollHeight;
         }
     </script>
