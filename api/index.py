@@ -4,12 +4,9 @@ import json
 from groq import Groq
 
 app = Flask(__name__)
-
-# Persistent in-memory storage for the session
 knowledge_base = {}
 
 def clean_text(text):
-    """Prevents encoding crashes by stripping illegal characters."""
     if not text: return ""
     return text.replace('\u2028', ' ').replace('\u2029', ' ').encode('utf-8', 'ignore').decode('utf-8')
 
@@ -17,20 +14,15 @@ def clean_text(text):
 def ingest():
     try:
         data = request.get_json(force=True)
-        
-        # Accept Hex ID as string to prevent int() conversion errors
         s_id = str(data.get('search_id')).strip()
         p_token = data.get('pulsar_token')
         
-        # Dates from UI (ISO 8601)
-        d_from = data.get('from')
-        d_to = data.get('to')
-
-        # NESTED SCHEMA FIX: Arguments belong to the inner results field
+        # SCHEMA FIX: Arguments (limit, sort) moved to the primary 'results' field.
+        # The inner 'results' is now a simple leaf node fetching the list.
         query = """
         query GetPulsarData($f: FilterInput!) {
-          results(filter: $f) {
-            results(limit: 250, offset: 0, sort: { field: VISIBILITY, order: DESC }) {
+          results(filter: $f, limit: 250, offset: 0, sort: { field: VISIBILITY, order: DESC }) {
+            results {
               content
               source
               visibility
@@ -46,12 +38,11 @@ def ingest():
         variables = {
             "f": {
                 "searchIds": [s_id],
-                "dateFrom": d_from,
-                "dateTo": d_to
+                "dateFrom": data.get('from'),
+                "dateTo": data.get('to')
             }
         }
         
-        # Force UTF-8 encoding for the payload
         payload = json.dumps({"query": query, "variables": variables}).encode('utf-8')
         
         r = requests.post(
@@ -67,28 +58,19 @@ def ingest():
         res_json = r.json()
         
         if "errors" in res_json:
-            error_msg = res_json['errors'][0].get('message', 'GraphQL Error')
-            return jsonify({"error": error_msg}), 400
+            return jsonify({"error": res_json['errors'][0].get('message')}), 400
 
-        # Targeted extraction: data -> results (wrapper) -> results (list)
+        # Data extraction
         batch = res_json.get('data', {}).get('results', {}).get('results', [])
         
         if not batch:
-            return jsonify({
-                "status": "empty", 
-                "message": "Pulsar returned 0 results. Check ID/Dates."
-            })
+            return jsonify({"status": "empty", "message": "Zero results. Check ID/Dates."})
 
         for post in batch:
             post['content'] = clean_text(post.get('content', ''))
             
         knowledge_base[s_id] = batch
-        
-        return jsonify({
-            "status": "success", 
-            "count": len(batch),
-            "log": f"Successfully indexed {len(batch)} visibility-prioritized nodes."
-        })
+        return jsonify({"status": "success", "count": len(batch)})
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -103,30 +85,19 @@ def ask():
 
         dataset = knowledge_base.get(s_id, [])
         if not dataset:
-            return jsonify({"answer": "Error: Knowledge base empty. Please run ingestion."}), 400
+            return jsonify({"answer": "Error: Knowledge base empty."}), 400
 
-        # Pack top 150 most visible posts as context for Groq
-        context = []
-        for p in dataset[:150]:
-            context.append({
-                "text": p.get('content', '')[:140],
-                "reach": p.get('visibility'),
-                "sentiment": p.get('sentiment'),
-                "emotions": p.get('emotions'),
-                "topics": p.get('topics')
-            })
+        context = [{"text": p.get('content', '')[:140], "r": p.get('visibility'), "s": p.get('sentiment'), "e": p.get('emotions'), "tp": p.get('topics')} for p in dataset[:150]]
             
         client = Groq(api_key=g_key)
         chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are Gemini Intelligence. Analyze these high-visibility posts. Group insights by Emotion, Topic, and Reach using Markdown."},
+                {"role": "system", "content": "You are Gemini Intelligence. Analyze the reach-prioritized social data provided."},
                 {"role": "user", "content": f"Data: {json.dumps(context)}\n\nQuery: {query}"}
-            ],
-            temperature=0.3
+            ]
         )
         return jsonify({"answer": chat.choices[0].message.content})
-        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
