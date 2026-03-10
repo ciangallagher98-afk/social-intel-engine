@@ -1,142 +1,39 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grok Intelligence | Generative Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; background: #fafafa; color: #1a1a1a; }
-        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
-        .loader-ring { border: 2px solid #f3f3f3; border-top: 2px solid #000; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
-</head>
-<body class="p-4 md:p-12">
-    <div class="max-w-6xl mx-auto">
-        <header class="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b pb-12">
-            <div>
-                <h1 class="text-4xl font-black tracking-tighter uppercase italic italic">Grok<span class="text-blue-600">.OS</span></h1>
-                <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Autonomous Strategy Engine</p>
-            </div>
-            <div class="flex flex-wrap gap-3">
-                <input id="p_token" type="password" placeholder="Pulsar Token" class="p-3 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-black">
-                <input id="g_key" type="password" placeholder="Groq Key" class="p-3 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-black">
-                <input id="s_id" type="text" placeholder="Search ID" class="p-3 text-xs border rounded-lg outline-none focus:ring-1 focus:ring-black w-24">
-                <select id="date_preset" class="p-3 text-xs border rounded-lg bg-white outline-none">
-                    <option value="7">7 Days</option>
-                    <option value="30">30 Days</option>
-                    <option value="qtd">QTD</option>
-                </select>
-            </div>
-        </header>
+<script>
+async function ask() {
+    const q = document.getElementById('query').value;
+    const history = document.getElementById('history');
+    
+    // User bubble
+    const userMsg = document.createElement('div');
+    userMsg.className = "ml-auto max-w-[80%] bg-blue-600 p-4 rounded-2xl rounded-tr-none mb-6";
+    userMsg.innerHTML = `<p class="text-sm text-white">${q}</p>`;
+    history.appendChild(userMsg);
 
-        <div class="mb-12">
-            <textarea id="prompt" rows="1" class="w-full text-3xl font-light bg-transparent border-none focus:ring-0 outline-none placeholder-gray-200" placeholder="Ask anything... (e.g. 'Compare Smirnoff vs Absolut reach')"></textarea>
-            <div class="mt-6 flex items-center gap-6">
-                <button onclick="run()" id="btn" class="px-8 py-4 bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-blue-600 transition-all flex items-center gap-3">
-                    <span>Execute Analysis</span>
-                    <div id="btn-loader" class="loader-ring hidden"></div>
-                </button>
-                <span id="status" class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Ready for Command</span>
-            </div>
+    const res = await fetch('/api/ask', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            search_id: document.getElementById('s_id').value,
+            groq_key: document.getElementById('g_key').value,
+            question: q
+        })
+    });
+    const data = await res.json();
+    
+    // AI response with "Insight Card" styling
+    const aiMsg = document.createElement('div');
+    aiMsg.className = "mr-auto max-w-[90%] bg-[#111] border border-gray-800 p-6 rounded-2xl rounded-tl-none mb-6 shadow-2xl";
+    aiMsg.innerHTML = `
+        <div class="flex items-center gap-2 mb-4">
+            <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Intelligence Synthesis</span>
         </div>
-
-        <div id="metric_row" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"></div>
-
-        <div id="canvas" class="grid grid-cols-1 md:grid-cols-2 gap-8"></div>
-    </div>
-
-    <script>
-        // Persistence
-        ['p_token', 'g_key', 's_id'].forEach(id => {
-            const val = sessionStorage.getItem(id);
-            if(val) document.getElementById(id).value = val;
-            document.getElementById(id).addEventListener('input', e => sessionStorage.setItem(id, e.target.value));
-        });
-
-        async function run() {
-            const btn = document.getElementById('btn');
-            const btnLoader = document.getElementById('btn-loader');
-            const canvas = document.getElementById('canvas');
-            const metrics = document.getElementById('metric_row');
-            const status = document.getElementById('status');
-
-            btn.disabled = true;
-            btnLoader.classList.remove('hidden');
-            status.innerText = "Synthesizing...";
-            canvas.innerHTML = "";
-            metrics.innerHTML = "";
-
-            const preset = document.getElementById('date_preset').value;
-            let f = new Date(); let t = new Date();
-            if(preset === 'qtd') f = new Date(f.getFullYear(), Math.floor(f.getMonth()/3)*3, 1);
-            else f.setDate(f.getDate() - parseInt(preset));
-
-            try {
-                const res = await fetch('/api/analyze', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        pulsar_token: document.getElementById('p_token').value,
-                        groq_key: document.getElementById('g_key').value,
-                        search_id: document.getElementById('s_id').value,
-                        date_from: f.toISOString().split('T')[0],
-                        date_to: t.toISOString().split('T')[0],
-                        prompt: document.getElementById('prompt').value
-                    })
-                });
-
-                const data = await res.json();
-                if(data.error) throw new Error(data.error);
-
-                // RENDER LOOP
-                data.widgets.forEach((w, i) => {
-                    if (w.type === 'metric') {
-                        const m = document.createElement('div');
-                        m.className = "bg-white p-6 rounded-2xl border border-gray-100 shadow-sm";
-                        m.innerHTML = `<p class="text-[9px] font-black text-gray-400 uppercase mb-1">${w.label}</p><p class="text-2xl font-bold">${w.value}</p>`;
-                        metrics.appendChild(m);
-                    } else {
-                        const box = document.createElement('div');
-                        box.className = `p-8 bg-white rounded-3xl border border-gray-100 shadow-sm ${w.type === 'text' ? 'md:col-span-2' : ''}`;
-                        box.innerHTML = `<h3 class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-6">${w.title}</h3>`;
-                        
-                        if (w.type === 'text') {
-                            const p = document.createElement('p');
-                            p.className = "text-xl font-light leading-relaxed text-gray-700";
-                            p.innerText = w.body;
-                            box.appendChild(p);
-                        } else if (w.type === 'chart') {
-                            const cid = `chart-${i}`;
-                            const cdiv = document.createElement('div');
-                            cdiv.id = cid;
-                            cdiv.className = "h-[400px] w-full";
-                            box.appendChild(cdiv);
-                            setTimeout(() => {
-                                Plotly.newPlot(cid, w.plotly_config, {
-                                    margin: { t: 0, r: 20, l: 40, b: 40 },
-                                    font: { family: 'Inter', size: 10 },
-                                    paper_bgcolor: 'rgba(0,0,0,0)',
-                                    plot_bgcolor: 'rgba(0,0,0,0)'
-                                }, {responsive: true, displayModeBar: false});
-                            }, 50);
-                        }
-                        canvas.appendChild(box);
-                    }
-                });
-
-                status.innerText = "Execution Complete";
-            } catch (e) {
-                alert(e.message);
-                status.innerText = "Engine Error";
-            } finally {
-                btn.disabled = false;
-                btnLoader.classList.add('hidden');
-            }
-        }
-    </script>
-</body>
-</html>
+        <div class="text-gray-300 font-light leading-relaxed prose prose-invert">
+            ${data.answer.replace(/\n/g, '<br>')}
+        </div>
+    `;
+    history.appendChild(aiMsg);
+    history.scrollTop = history.scrollHeight;
+    document.getElementById('query').value = "";
+}
+</script>
