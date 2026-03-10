@@ -27,11 +27,12 @@ def ingest():
 
         all_posts = []
         offset = 0
-        limit = 250
-        max_pages = 20 # Safety cap: max 5,000 posts per ingest so your browser doesn't time out
+        limit = 50 # THE FIX: Pulsar strictly caps pagination at 50 per page!
+        max_pages = 50 # 50 pages * 50 posts = 2,500 posts deep. Raise this if you want more.
 
         while offset < (limit * max_pages):
-            # We inject the offset dynamically to paginate through the results
+            # Your exact working query: limit and offset on the outer wrapper
+            # Using 'engagement' and 'emotion' exactly as you wrote them
             query = """
             query GetPulsarData($f: FilterInput!) {
               results(filter: $f, limit: %d, offset: %d) {
@@ -67,7 +68,7 @@ def ingest():
             batch = res_json.get('data', {}).get('results', {}).get('results', [])
             
             if not batch:
-                # If we get an empty batch, we've reached the end of the data!
+                # If we get an empty batch, we've reached the very end of the data!
                 break
 
             for post in batch:
@@ -75,7 +76,7 @@ def ingest():
             
             all_posts.extend(batch)
             
-            # If the batch is smaller than the limit, we're on the last page
+            # Since limit is 50, if it returns 49, we know it's the last page.
             if len(batch) < limit:
                 break
                 
@@ -102,11 +103,11 @@ def ask():
         if not dataset:
             return jsonify({"answer": "Error: Knowledge base empty."}), 400
 
-        # Sort the massive dataset by visibility so the AI sees the most important stuff first
+        # Sort all the collected posts by visibility
         sorted_dataset = sorted(dataset, key=lambda x: x.get('visibility', 0), reverse=True)
 
-        # We take the top 250 highest-reach posts from the full dataset to keep the AI from crashing
-        context = [{"text": p.get('content', '')[:140], "r": p.get('visibility'), "s": p.get('sentiment'), "e": p.get('emotions'), "tp": p.get('topics')} for p in sorted_dataset[:250]]
+        # Updated context dict to match your working fields ('emotion' instead of 'emotions')
+        context = [{"text": p.get('content', '')[:140], "r": p.get('visibility'), "s": p.get('sentiment'), "e": p.get('emotion')} for p in sorted_dataset[:250]]
             
         client = Groq(api_key=g_key)
         chat = client.chat.completions.create(
