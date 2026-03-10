@@ -5,6 +5,12 @@ import json
 
 app = Flask(__name__)
 
+def scrub_text(text):
+    """Removes problematic Unicode characters like \u2028 and \u2029"""
+    if not text: return ""
+    # Replace line separators and paragraph separators with spaces
+    return text.replace('\u2028', ' ').replace('\u2029', ' ').strip()
+
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     try:
@@ -31,29 +37,47 @@ def analyze():
             headers={"Authorization": f"Bearer {p_token}", "Content-Type": "application/json"}
         )
         
-        posts = pulsar_res.json().get('data', {}).get('results', {}).get('results', [])
-        if not posts: return jsonify({"error": "No data found."}), 404
+        raw_data = pulsar_res.json()
+        if 'errors' in raw_data:
+            return jsonify({"error": raw_data['errors'][0]['message']}), 400
 
-        # Calculate SOV before slicing
+        posts = raw_data.get('data', {}).get('results', {}).get('results', [])
+        if not posts: return jsonify({"error": "No data found for this range."}), 404
+
+        # 1. Share of Voice Calculation (All sources)
         sources = [p.get('source', 'Unknown') for p in posts]
         sov = {s: round((sources.count(s) / len(sources)) * 100) for s in set(sources)}
 
-        # Sort by impact and send the most important context
+        # 2. Strategic Sampling (Top 50 by Impact)
         sorted_posts = sorted(posts, key=lambda x: x.get('visibility', 0), reverse=True)
-        context = [{"text": p.get('content')[:200], "impact": p.get('visibility'), "src": p.get('source'), "date": p.get('publishedAt')} for p in sorted_posts[:50]]
+        
+        # Scrub text for safe UTF-8 encoding
+        context = [{
+            "text": scrub_text(p.get('content'))[:220], 
+            "impact": p.get('visibility'), 
+            "src": p.get('source'),
+            "date": p.get('publishedAt')
+        } for p in sorted_posts[:50]]
 
+        # 3. AI Strategic Synthesis
         client = Groq(api_key=g_key)
-        completion = client.chat.create(
+        completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "You are a Strategy Consultant. Return JSON: {executive_summary, themes: [{title, summary, impact_level, offensive_play, defensive_play}]}"},
-                {"role": "user", "content": f"User Goal: {data.get('prompt')}\n\nData: {json.dumps(context)}"}
+                {"role": "system", "content": """You are a Lead Strategy Consultant. 
+                Identify the 4 most critical narrative themes. 
+                For each theme, provide: 
+                - title, summary, impact_score (1-100)
+                - 'offensive_play': (Growth opportunity)
+                - 'defensive_play': (Risk mitigation)
+                Return JSON: {executive_summary, themes: []}"""},
+                {"role": "user", "content": f"Goal: {data.get('prompt')}\n\nData: {json.dumps(context)}"}
             ]
         )
-        
+
         result = json.loads(completion.choices[0].message.content)
-        result['sov'] = sov # Attach SOV data for the UI
+        result['sov'] = sov # Append SOV to the AI response
         return jsonify(result)
 
     except Exception as e:
