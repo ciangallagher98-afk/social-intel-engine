@@ -2,76 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pulsar Pro | Temporal Intelligence</title>
+    <title>Pulsar Pro | Strategic Insights</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111; }
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111; letter-spacing: -0.01em; }
         .ikea-blue { background-color: #0058a3; }
         .ikea-text { color: #0058a3; }
-        .border-soft { border-color: #efefef; }
+        .border-soft { border-color: #f2f2f2; }
+        .transition-slow { transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
     </style>
 </head>
-<body class="p-8 md:p-20">
-    <div class="max-w-6xl mx-auto">
-        <header class="flex justify-between items-baseline mb-20 border-b border-soft pb-10">
-            <h1 class="text-3xl font-black tracking-tighter ikea-text uppercase italic">Pulsar <span class="text-gray-200 font-normal not-italic">Pro</span></h1>
-            <p class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.4em]">Time-Series Analysis Active</p>
+<body class="p-6 md:p-20">
+    <div class="max-w-5xl mx-auto">
+        <header class="flex justify-between items-center mb-24 border-b border-soft pb-12">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter ikea-text uppercase italic">Pulsar <span class="text-gray-300 font-normal not-italic lowercase">Pro</span></h1>
+            </div>
+            <div class="flex gap-4 items-center">
+                <span class="text-[9px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 uppercase tracking-widest">Live Engine</span>
+                <span class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">v4.0</span>
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-20">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-16">
             <aside class="lg:col-span-1 space-y-12">
-                <div class="space-y-6">
-                    <h3 class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Connection</h3>
-                    <div class="space-y-3">
-                        <input id="p_token" type="password" placeholder="Pulsar Token" class="w-full p-4 bg-white border border-soft rounded-none text-sm outline-none focus:border-blue-500 transition-all">
-                        <input id="g_key" type="password" placeholder="Groq Key" class="w-full p-4 bg-white border border-soft rounded-none text-sm outline-none focus:border-blue-500 transition-all">
-                        <input id="s_id" type="text" placeholder="Search UID" class="w-full p-4 bg-white border border-soft rounded-none text-sm outline-none focus:border-blue-500 transition-all">
-                    </div>
+                <div class="space-y-4">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Setup</label>
+                    <input id="p_token" type="password" placeholder="Pulsar Token" class="w-full p-4 border border-soft rounded-lg text-sm outline-none focus:border-blue-500">
+                    <input id="g_key" type="password" placeholder="Groq Key" class="w-full p-4 border border-soft rounded-lg text-sm outline-none">
+                    <input id="s_id" type="text" placeholder="Search UID" class="w-full p-4 border border-soft rounded-lg text-sm outline-none">
                 </div>
 
-                <div class="space-y-6">
-                    <h3 class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Window</h3>
-                    <select id="date_preset" onchange="toggleDate()" class="w-full p-4 bg-white border border-soft rounded-none text-sm outline-none">
-                        <option value="7">Past Week</option>
-                        <option value="30">Past Month</option>
-                        <option value="custom">Manual Range...</option>
+                <div class="space-y-4">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Data Window</label>
+                    <select id="date_preset" onchange="toggleDate()" class="w-full p-4 bg-white border border-soft rounded-lg text-sm outline-none appearance-none">
+                        <option value="1">Yesterday</option>
+                        <option value="7" selected>Last 7 Days</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="custom">Custom Range...</option>
                     </select>
                     <div id="custom_ui" class="hidden space-y-2">
-                        <input id="date_from" type="date" class="w-full p-3 border border-soft text-xs">
-                        <input id="date_to" type="date" class="w-full p-3 border border-soft text-xs">
+                        <input id="date_from" type="date" class="w-full p-3 border border-soft text-xs rounded-lg">
+                        <input id="date_to" type="date" class="w-full p-3 border border-soft text-xs rounded-lg">
                     </div>
                 </div>
 
-                <button onclick="run()" id="btn" class="w-full py-5 ikea-blue text-white font-bold text-xs tracking-[0.2em] hover:opacity-90 transition-all">GENERATE INSIGHTS</button>
+                <button onclick="run()" id="btn" class="w-full py-5 ikea-blue text-white font-bold text-[10px] tracking-[0.2em] rounded-lg hover:opacity-90 transition-slow uppercase">Generate Summary</button>
             </aside>
 
             <main class="lg:col-span-3">
                 <div class="mb-16">
-                    <textarea id="prompt" rows="2" class="w-full text-4xl font-light border-none focus:ring-0 outline-none placeholder-gray-100" placeholder="e.g. Why did mentions spike on Tuesday?"></textarea>
+                    <textarea id="prompt" rows="2" class="w-full text-4xl font-light border-none focus:ring-0 outline-none placeholder-gray-200" placeholder="Analyze main themes from yesterday..."></textarea>
                 </div>
 
                 <div id="prog_wrap" class="hidden mb-16">
                     <div class="flex justify-between items-end mb-4">
-                        <span id="prog_msg" class="text-[10px] font-bold ikea-text uppercase tracking-widest">Analyzing Timeline</span>
-                        <span id="prog_val" class="text-2xl font-light ikea-text">0%</span>
+                        <span id="prog_msg" class="text-[9px] font-bold ikea-text uppercase tracking-[0.2em]">Processing Signals</span>
+                        <span id="prog_val" class="text-3xl font-black ikea-text italic">0%</span>
                     </div>
-                    <div class="w-full bg-gray-50 h-[1px]"><div id="prog_bar" class="ikea-blue h-[1px] transition-all duration-1000 ease-in-out" style="width:0%"></div></div>
+                    <div class="w-full bg-gray-50 h-[2px]"><div id="prog_bar" class="ikea-blue h-[2px] transition-slow" style="width:0%"></div></div>
                 </div>
 
                 <div id="output" class="hidden space-y-20">
-                    <div class="max-w-2xl">
-                        <h4 class="text-[10px] font-bold text-gray-300 uppercase mb-6 tracking-widest">Executive Intelligence Report</h4>
-                        <p id="sum-text" class="text-2xl text-gray-800 font-light leading-snug italic"></p>
-                    </div>
-                    <div id="grid" class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-16"></div>
+                    <section>
+                        <h4 class="text-[9px] font-bold text-gray-400 uppercase mb-6 tracking-widest">Executive Intelligence</h4>
+                        <p id="sum-text" class="text-2xl text-gray-800 font-light leading-snug"></p>
+                    </section>
+
+                    <div id="grid" class="grid grid-cols-1 gap-12"></div>
                 </div>
             </main>
         </div>
     </div>
 
     <script>
-        // Key Persistence
+        // Store keys
         ['p_token', 'g_key', 's_id'].forEach(id => {
             const val = sessionStorage.getItem(id);
             if(val) document.getElementById(id).value = val;
@@ -95,9 +101,8 @@
             btn.disabled = true; wrap.classList.remove('hidden'); out.classList.add('hidden');
             grid.innerHTML = "";
 
-            await updateProgress(20, "Scanning Pulsar Database");
+            await updateProgress(25, "Scanning Trac Results");
 
-            // Date Calculation
             const preset = document.getElementById('date_preset').value;
             let f = new Date(); let t = new Date();
             if(preset !== 'custom') f.setDate(f.getDate() - parseInt(preset));
@@ -113,34 +118,29 @@
                         search_id: document.getElementById('s_id').value,
                         date_from: f.toISOString().split('T')[0],
                         date_to: t.toISOString().split('T')[0],
-                        prompt: document.getElementById('prompt').value || "Analyze trends and anomalies"
+                        prompt: document.getElementById('prompt').value || "What are the main themes?"
                     })
                 });
 
-                await updateProgress(70, "Mapping Narrative Events");
+                await updateProgress(75, "Clustering Themes");
                 const data = await res.json();
                 if(data.error) throw new Error(data.error);
 
-                await updateProgress(100, "Report Compiled");
-                document.getElementById('sum-text').innerText = data.summary;
+                await updateProgress(100, "Ready");
+                document.getElementById('sum-text').innerText = data.executive_summary;
 
-                data.categories.forEach(cat => {
+                data.themes.forEach(theme => {
                     const card = document.createElement('div');
-                    card.className = "border-t border-gray-100 pt-8 group";
+                    card.className = "group border-l-2 border-gray-50 pl-10 py-2 hover:border-blue-600 transition-slow";
                     card.innerHTML = `
-                        <div class="flex justify-between items-baseline mb-6">
-                            <h5 class="text-sm font-bold uppercase tracking-tight">${cat.name}</h5>
-                            <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1">IMPACT ${cat.impact}</span>
+                        <div class="flex justify-between items-baseline mb-4">
+                            <h5 class="text-xl font-bold tracking-tight">${theme.title}</h5>
+                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Impact ${theme.impact_level}</span>
                         </div>
-                        <div class="flex gap-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest mb-6">
-                            <span class="text-gray-900">${cat.sentiment}</span>
-                            <span>${cat.emotion}</span>
-                            <span>${cat.count} Mentions</span>
-                        </div>
-                        <p class="text-[10px] text-gray-400 font-mono mb-6 truncate bg-gray-50 p-3 rounded group-hover:bg-blue-50 transition-colors">${cat.boolean}</p>
-                        <div class="flex justify-between items-center">
-                            <a href="${cat.url}" target="_blank" class="text-[10px] font-bold ikea-text border-b border-blue-500 pb-1 uppercase">Source Link</a>
-                            <button onclick="navigator.clipboard.writeText('${cat.boolean}')" class="text-[9px] font-bold text-gray-200 hover:text-blue-500 uppercase transition-colors">Copy Logic</button>
+                        <p class="text-gray-500 font-light leading-relaxed mb-6 max-w-2xl">${theme.summary}</p>
+                        <div class="flex gap-8 items-center">
+                            <a href="${theme.top_post_url}" target="_blank" class="text-[10px] font-bold ikea-text border-b border-blue-500 pb-1 uppercase tracking-widest hover:text-blue-800 transition-colors">View Primary Evidence</a>
+                            <span class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Driver: ${theme.key_driver}</span>
                         </div>
                     `;
                     grid.appendChild(card);
