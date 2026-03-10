@@ -17,25 +17,18 @@ def ingest():
         s_id = nuke_invisible_chars(data.get('search_id'))
         p_token = nuke_invisible_chars(data.get('pulsar_token'))
         
-        variables = {
-            "f": {
-                "searchIds": [s_id],
-                "dateFrom": data.get('from'),
-                "dateTo": data.get('to')
-            }
-        }
-
         all_posts = []
         offset = 0
-        limit = 50 # THE FIX: Pulsar strictly caps pagination at 50 per page!
-        max_pages = 50 # 50 pages * 50 posts = 2,500 posts deep. Raise this if you want more.
+        limit = 50 
+        max_pages = 20 # 50 posts * 20 pages = 1,000 deep
 
         while offset < (limit * max_pages):
-            # Your exact working query: limit and offset on the outer wrapper
-            # Using 'engagement' and 'emotion' exactly as you wrote them
+            
+            # THE PURE QUERY: Notice there is NO limit or offset here.
+            # Using singular 'engagement' and 'emotion' based on your last working snippet.
             query = """
             query GetPulsarData($f: FilterInput!) {
-              results(filter: $f, limit: %d, offset: %d) {
+              results(filter: $f) {
                 results {
                   content
                   source
@@ -43,11 +36,22 @@ def ingest():
                   engagement
                   sentiment
                   emotion
-                  
+                 
                 }
               }
             }
-            """ % (limit, offset)
+            """
+            
+            # Paginating strictly through the FilterInput variables
+            variables = {
+                "f": {
+                    "searchIds": [s_id],
+                    "dateFrom": data.get('from'),
+                    "dateTo": data.get('to'),
+                    "limit": limit,
+                    "offset": offset
+                }
+            }
             
             payload = json.dumps({"query": query, "variables": variables}).encode('utf-8')
             
@@ -62,25 +66,24 @@ def ingest():
             )
             
             res_json = r.json()
+            
             if "errors" in res_json:
                 return jsonify({"error": res_json['errors'][0].get('message')}), 400
 
             batch = res_json.get('data', {}).get('results', {}).get('results', [])
             
             if not batch:
-                # If we get an empty batch, we've reached the very end of the data!
-                break
+                break # We hit the end of the data
 
             for post in batch:
                 post['content'] = post.get('content', '').replace('\u2028', ' ').replace('\u2029', ' ')
             
             all_posts.extend(batch)
             
-            # Since limit is 50, if it returns 49, we know it's the last page.
             if len(batch) < limit:
-                break
+                break # Last page reached
                 
-            offset += limit # Turn the page
+            offset += limit
 
         if not all_posts:
             return jsonify({"status": "empty", "message": "Zero results. Check ID/Dates."})
@@ -106,14 +109,14 @@ def ask():
         # Sort all the collected posts by visibility
         sorted_dataset = sorted(dataset, key=lambda x: x.get('visibility', 0), reverse=True)
 
-        # Updated context dict to match your working fields ('emotion' instead of 'emotions')
+        # Context compression mapping to 'emotion' singular
         context = [{"text": p.get('content', '')[:140], "r": p.get('visibility'), "s": p.get('sentiment'), "e": p.get('emotion')} for p in sorted_dataset[:250]]
             
         client = Groq(api_key=g_key)
         chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are Gemini Intelligence. You are analyzing the highest-reach posts pulled from a massive dataset. Group insights by Emotion and Topic using Markdown."},
+                {"role": "system", "content": "You are Gemini Intelligence. Group insights by Emotion and Topic using Markdown."},
                 {"role": "user", "content": f"Data: {json.dumps(context)}\n\nQuery: {query}"}
             ]
         )
