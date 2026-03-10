@@ -25,13 +25,20 @@ def analyze():
                    visibility 
                    sentiment
                    emotion
-                   engagement
+                   engagements
                    contentUrl
                }
            }
         }
         """
-        variables = {"filters": {"searchIds": [s_id], "dateFrom": f"{date_from}T00:00:00Z", "dateTo": f"{date_to}T23:59:59Z"}}
+       # Change this part of your code:
+variables = {
+    "filters": {
+        "searchIds": [int(s_id)], # Ensure Search ID is an integer
+        "dateFrom": f"{date_from}T00:00:00Z",
+        "dateTo": f"{date_to}T23:59:59Z"
+    }
+}
         headers = {"Authorization": f"Bearer {p_token}", "Content-Type": "application/json"}
         
         pulsar_res = requests.post("https://data.pulsarplatform.com/graphql/trac", json={"query": query, "variables": variables}, headers=headers)
