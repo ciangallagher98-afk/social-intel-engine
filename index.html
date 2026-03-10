@@ -1,57 +1,234 @@
-<div id="sov_container" class="hidden mb-20 space-y-8 animate-fadeIn">
-    <div>
-        <h4 class="text-[9px] font-black text-gray-300 uppercase mb-4 tracking-widest">Global Brand Share (SOV)</h4>
-        <div id="brand_bar" class="flex w-full h-12 rounded-2xl overflow-hidden bg-gray-50 shadow-inner"></div>
-    </div>
-    
-    <div id="source_breakdown_grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulsar Pro | Competitive Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111; -webkit-font-smoothing: antialiased; }
+        .ikea-blue { background-color: #0058a3; }
+        .ikea-text { color: #0058a3; }
+        .border-soft { border-color: #f1f1f1; }
+        .animate-slideUp { animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        progress::-webkit-progress-value { background-color: #0058a3; transition: width 0.5s ease; }
+        progress::-webkit-progress-bar { background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="p-6 md:p-16 lg:p-20">
+    <div class="max-w-7xl mx-auto">
+        <header class="flex justify-between items-end mb-20 border-b border-soft pb-10">
+            <div>
+                <h1 class="text-3xl font-black tracking-tighter ikea-text uppercase italic">Pulsar <span class="text-gray-200 font-normal not-italic lowercase">Pro</span></h1>
+                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">v3.0 Multi-Brand Strategy Engine</p>
+            </div>
+            <div id="status-chip" class="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-full border border-soft">
+                <span id="status-dot" class="h-2 w-2 rounded-full bg-gray-300"></span>
+                <span id="status-text" class="text-[9px] font-black text-gray-400 uppercase tracking-widest">System Ready</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-16">
+            <aside class="lg:col-span-1 space-y-10">
+                <div class="space-y-4">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Secure Keys</label>
+                    <input id="p_token" type="password" placeholder="Pulsar API Token" class="w-full p-4 border border-soft rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all">
+                    <input id="g_key" type="password" placeholder="Groq API Key" class="w-full p-4 border border-soft rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all">
+                    <input id="s_id" type="text" placeholder="Search UID" class="w-full p-4 border border-soft rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-100 transition-all">
+                </div>
+
+                <div class="space-y-4">
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Timeframe</label>
+                    <select id="date_preset" onchange="toggleDate()" class="w-full p-4 bg-gray-50 border border-soft rounded-xl text-sm outline-none cursor-pointer">
+                        <option value="7" selected>Last 7 Days</option>
+                        <option value="30">Last 30 Days</option>
+                        <option value="qtd">Quarter to Date</option>
+                        <option value="ytd">Year to Date</option>
+                        <option value="custom">Custom Range...</option>
+                    </select>
+                    <div id="custom_ui" class="hidden grid grid-cols-2 gap-2">
+                        <input id="date_from" type="date" class="p-3 border border-soft rounded-lg text-[10px]">
+                        <input id="date_to" type="date" class="p-3 border border-soft rounded-lg text-[10px]">
+                    </div>
+                </div>
+
+                <button onclick="run()" id="btn" class="w-full py-5 ikea-blue text-white font-black text-[10px] tracking-widest rounded-xl hover:shadow-2xl hover:-translate-y-1 transition-all uppercase active:translate-y-0">Analyze Competitive Set</button>
+            </aside>
+
+            <main class="lg:col-span-3">
+                <div class="mb-12">
+                    <label class="text-[10px] font-black text-blue-500 uppercase tracking-widest block mb-4">Competitor Definition</label>
+                    <textarea id="prompt" rows="1" class="w-full text-4xl font-light border-none focus:ring-0 outline-none placeholder-gray-100 leading-tight" placeholder="e.g. Smirnoff, Absolut, Tito's"></textarea>
+                    <p class="text-[10px] text-gray-400 mt-4 italic">List brands separated by commas for Brand SOV mapping.</p>
+                </div>
+
+                <div id="sov_container" class="hidden space-y-12 mb-20 animate-slideUp">
+                    <div class="bg-white">
+                        <h4 class="text-[10px] font-black text-gray-300 uppercase mb-6 tracking-widest">Share of Voice (By Mention Volume)</h4>
+                        <div id="brand_bar" class="flex w-full h-14 rounded-2xl overflow-hidden bg-gray-50 border border-gray-100 shadow-sm"></div>
+                    </div>
+                    
+                    <div id="source_grid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        </div>
+                </div>
+
+                <div id="loader" class="hidden py-20 text-center">
+                    <div class="inline-block w-8 h-8 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                    <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Synthesizing 500 Narrative Signals...</p>
+                </div>
+
+                <div id="output" class="hidden space-y-24 animate-slideUp">
+                    <div class="max-w-3xl border-l-2 border-blue-600 pl-10">
+                        <h4 class="text-[10px] font-black text-gray-300 uppercase mb-4 tracking-widest">Executive Summary</h4>
+                        <p id="sum-text" class="text-3xl text-gray-800 font-light leading-snug"></p>
+                    </div>
+                    <div id="theme_grid" class="grid grid-cols-1 gap-20"></div>
+                </div>
+            </main>
         </div>
-</div>
+    </div>
 
-<script>
-// Inside your run() function after getting the 'data' response:
+    <script>
+        // Session Persistence
+        ['p_token', 'g_key', 's_id'].forEach(id => {
+            const val = sessionStorage.getItem(id);
+            if(val) document.getElementById(id).value = val;
+            document.getElementById(id).addEventListener('input', e => sessionStorage.setItem(id, e.target.value));
+        });
 
-// 1. Render Main Brand SOV Bar
-const brandBar = document.getElementById('brand_bar');
-const sourceGrid = document.getElementById('source_breakdown_grid');
-brandBar.innerHTML = "";
-sourceGrid.innerHTML = "";
+        function toggleDate() { document.getElementById('custom_ui').classList.toggle('hidden', document.getElementById('date_preset').value !== 'custom'); }
 
-const totalPosts = Object.values(data.brand_sov).reduce((a, b) => a + b.count, 0);
-const colors = ['#0058a3', '#ffcc00', '#111111', '#777777']; // Professional Competitor Palette
+        async function run() {
+            const btn = document.getElementById('btn');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const loader = document.getElementById('loader');
+            const output = document.getElementById('output');
+            const sovContainer = document.getElementById('sov_container');
 
-Object.entries(data.brand_sov).forEach(([brand, info], i) => {
-    const percent = Math.round((info.count / totalPosts) * 100);
-    
-    // Create Main Bar Segment
-    const seg = document.createElement('div');
-    seg.style.width = percent + '%';
-    seg.style.backgroundColor = colors[i % colors.length];
-    seg.className = "flex items-center justify-center text-[10px] font-black text-white uppercase px-4 cursor-default transition-all hover:opacity-90";
-    seg.innerHTML = `<span>${brand} ${percent}%</span>`;
-    brandBar.appendChild(seg);
+            // UI Reset
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            output.classList.add('hidden');
+            sovContainer.classList.add('hidden');
+            statusDot.className = "h-2 w-2 rounded-full bg-blue-500 animate-pulse";
+            statusText.innerText = "Processing Data";
 
-    // Create Detailed Source Card for this Brand
-    const card = document.createElement('div');
-    card.className = "bg-gray-50 p-6 rounded-2xl border border-gray-100 shadow-sm";
-    
-    let sourceHtml = `<h6 class="text-[10px] font-black mb-4 uppercase tracking-widest" style="color:${colors[i%colors.length]}">${brand} Channels</h6>`;
-    
-    Object.entries(info.sources).forEach(([src, count]) => {
-        const srcPct = Math.round((count / info.count) * 100);
-        sourceHtml += `
-            <div class="mb-3">
-                <div class="flex justify-between text-[9px] font-bold text-gray-500 uppercase mb-1">
-                    <span>${src}</span><span>${srcPct}%</span>
-                </div>
-                <div class="w-full bg-gray-200 h-1 rounded-full">
-                    <div class="h-1 rounded-full" style="width:${srcPct}%; background-color:${colors[i%colors.length]}"></div>
-                </div>
-            </div>`;
-    });
-    card.innerHTML = sourceHtml;
-    sourceGrid.appendChild(card);
-});
+            // Date Calculation
+            const preset = document.getElementById('date_preset').value;
+            let f = new Date(); let t = new Date();
+            if(preset === '1') { f.setDate(f.getDate()-1); t.setDate(t.getDate()-1); }
+            else if(preset === 'qtd') { f = new Date(f.getFullYear(), Math.floor(f.getMonth()/3)*3, 1); }
+            else if(preset === 'ytd') { f = new Date(f.getFullYear(), 0, 1); }
+            else if(preset !== 'custom') { f.setDate(f.getDate() - parseInt(preset)); }
+            else { f = new Date(document.getElementById('date_from').value); t = new Date(document.getElementById('date_to').value); }
 
-document.getElementById('sov_container').classList.remove('hidden');
-</script>
+            try {
+                const res = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        pulsar_token: document.getElementById('p_token').value.trim(),
+                        groq_key: document.getElementById('g_key').value.trim(),
+                        search_id: document.getElementById('s_id').value.trim(),
+                        date_from: f.toISOString().split('T')[0],
+                        date_to: t.toISOString().split('T')[0],
+                        prompt: document.getElementById('prompt').value || "General Industry"
+                    })
+                });
+
+                const data = await res.json();
+                if(data.error) throw new Error(data.error);
+
+                // --- 1. RENDER BRAND SOV ---
+                const brandBar = document.getElementById('brand_bar');
+                const sourceGrid = document.getElementById('source_grid');
+                brandBar.innerHTML = ""; sourceGrid.innerHTML = "";
+
+                const brandEntries = Object.entries(data.brand_sov || {});
+                const totalMentions = brandEntries.reduce((acc, [_, info]) => acc + info.count, 0);
+                const colors = ['#0058a3', '#ffcc00', '#111111', '#c1c1c1', '#4a90e2'];
+
+                brandEntries.forEach(([brand, info], i) => {
+                    const brandPct = Math.round((info.count / totalMentions) * 100);
+                    const brandColor = colors[i % colors.length];
+
+                    // Main Bar Segment
+                    const seg = document.createElement('div');
+                    seg.style.width = brandPct + '%';
+                    seg.style.backgroundColor = brandColor;
+                    seg.className = "h-full flex items-center justify-center text-[10px] font-black text-white uppercase px-2 transition-all hover:opacity-90 cursor-default";
+                    seg.innerHTML = `<span class="truncate">${brand} ${brandPct}%</span>`;
+                    brandBar.appendChild(seg);
+
+                    // Channel Breakdown Card
+                    const card = document.createElement('div');
+                    card.className = "bg-gray-50/50 p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md";
+                    let cardHtml = `<h6 class="text-[10px] font-black mb-5 uppercase tracking-tighter" style="color:${brandColor}">${brand} Channels</h6>`;
+                    
+                    Object.entries(info.sources).forEach(([src, count]) => {
+                        const srcPct = Math.round((count / info.count) * 100);
+                        cardHtml += `
+                            <div class="mb-4">
+                                <div class="flex justify-between text-[8px] font-black text-gray-400 uppercase mb-1">
+                                    <span>${src}</span><span>${srcPct}%</span>
+                                </div>
+                                <div class="w-full bg-gray-200 h-[3px] rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-1000" style="width:${srcPct}%; background-color:${brandColor}"></div>
+                                </div>
+                            </div>`;
+                    });
+                    card.innerHTML = cardHtml;
+                    sourceGrid.appendChild(card);
+                });
+                sovContainer.classList.remove('hidden');
+
+                // --- 2. RENDER STRATEGIC THEMES ---
+                document.getElementById('sum-text').innerText = data.executive_summary;
+                const themeGrid = document.getElementById('theme_grid');
+                themeGrid.innerHTML = "";
+
+                data.themes.forEach(theme => {
+                    const card = document.createElement('div');
+                    card.className = "group border-l-4 border-gray-50 pl-12 py-2 hover:border-blue-600 transition-all duration-500";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-baseline mb-6">
+                            <h5 class="text-2xl font-black tracking-tight group-hover:text-blue-600 transition-colors">${theme.title}</h5>
+                            <span class="text-[10px] font-black ikea-text bg-blue-50 px-3 py-1 uppercase tracking-widest italic">Impact ${theme.impact}%</span>
+                        </div>
+                        <p class="text-gray-500 font-light text-xl mb-10 max-w-4xl leading-relaxed">${theme.summary}</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-12 bg-gray-50 p-10 rounded-3xl border border-gray-100">
+                            <div class="space-y-4">
+                                <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest block">Offensive Strategy</span>
+                                <p class="text-sm text-gray-700 italic border-l-2 border-emerald-200 pl-6 leading-relaxed">${theme.offensive}</p>
+                            </div>
+                            <div class="space-y-4">
+                                <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest block">Defensive Strategy</span>
+                                <p class="text-sm text-gray-700 italic border-l-2 border-rose-200 pl-6 leading-relaxed">${theme.defensive}</p>
+                            </div>
+                        </div>
+                    `;
+                    themeGrid.appendChild(card);
+                });
+
+                statusDot.className = "h-2 w-2 rounded-full bg-emerald-500";
+                statusText.innerText = "Report Generated";
+                loader.classList.add('hidden');
+                output.classList.remove('hidden');
+                window.scrollTo({ top: 400, behavior: 'smooth' });
+
+            } catch (e) {
+                console.error(e);
+                statusDot.className = "h-2 w-2 rounded-full bg-rose-500";
+                statusText.innerText = "Engine Error";
+                alert("Strategic Error: " + e.message);
+                loader.classList.add('hidden');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
