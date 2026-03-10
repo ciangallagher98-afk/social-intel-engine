@@ -3,138 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InsightFlow Pro</title>
+    <title>Sjölyst Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f4f4f4; color: #333; }
+        .ikea-blue { color: #0058a3; }
+        .ikea-bg-blue { background-color: #0058a3; }
+        .progress-bar { transition: width 0.4s ease; }
+    </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-10">
-    <div class="max-w-5xl mx-auto">
-        <header class="mb-10 text-center">
-            <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400 italic uppercase">InsightFlow Pro</h1>
-            <p class="text-slate-500 mt-2">Pulsar TRAC Intelligence & Impact Analytics</p>
+<body class="p-4 md:p-12">
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-12 border-b border-gray-200 pb-6">
+            <h1 class="text-2xl font-extrabold tracking-tighter ikea-blue">SJÖLYST <span class="text-gray-400 font-light">PRO</span></h1>
+            <div class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Global Insight Engine</div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-1 space-y-6 bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-xl">
-                <div class="space-y-3">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Credentials</label>
-                    <input id="p_token" type="password" placeholder="Pulsar Token" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:border-blue-500 outline-none">
-                    <input id="g_key" type="password" placeholder="Groq Key" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm focus:border-blue-500 outline-none">
-                </div>
-                <div class="space-y-3">
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Search Configuration</label>
-                    <input id="s_id" type="text" placeholder="Search ID" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm outline-none">
-                    <select id="date_preset" onchange="toggleDateVisibility()" class="w-full p-3 rounded-xl bg-slate-900 border border-slate-700 text-sm outline-none text-slate-300">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-10">
+            <aside class="lg:col-span-1 space-y-8">
+                <section>
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase mb-4 tracking-widest">Configuration</h3>
+                    <div class="space-y-3">
+                        <input id="p_token" type="password" placeholder="Pulsar Bearer Token" class="w-full p-3 bg-white border border-gray-300 rounded-sm text-sm focus:border-blue-500 outline-none transition-all">
+                        <input id="g_key" type="password" placeholder="Groq API Key" class="w-full p-3 bg-white border border-gray-300 rounded-sm text-sm focus:border-blue-500 outline-none transition-all">
+                        <input id="s_id" type="text" placeholder="Pulsar Search ID" class="w-full p-3 bg-white border border-gray-300 rounded-sm text-sm focus:border-blue-500 outline-none transition-all">
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-[10px] font-bold text-gray-500 uppercase mb-4 tracking-widest">Timeframe</h3>
+                    <select id="date_preset" onchange="toggleCustomDate()" class="w-full p-3 bg-white border border-gray-300 rounded-sm text-sm outline-none mb-3">
                         <option value="today">Today</option>
                         <option value="yesterday">Yesterday</option>
                         <option value="7" selected>Last 7 Days</option>
+                        <option value="14">Last 14 Days</option>
                         <option value="30">Last 30 Days</option>
-                        <option value="custom">Custom Range...</option>
+                        <option value="custom">Custom Range</option>
                     </select>
-                    <div id="custom_date_container" class="hidden flex gap-2">
-                        <input id="date_from" type="date" class="w-1/2 p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs">
-                        <input id="date_to" type="date" class="w-1/2 p-2 rounded-lg bg-slate-900 border border-slate-700 text-xs">
+                    <div id="custom_dates" class="hidden space-y-2">
+                        <input id="date_from" type="date" class="w-full p-2 border border-gray-300 rounded-sm text-xs">
+                        <input id="date_to" type="date" class="w-full p-2 border border-gray-300 rounded-sm text-xs">
+                    </div>
+                </section>
+
+                <button onclick="runAnalysis()" id="btn" class="w-full py-4 ikea-bg-blue text-white font-bold rounded-sm hover:opacity-90 transition-all shadow-md">ANALYZE</button>
+            </aside>
+
+            <main class="lg:col-span-3">
+                <div class="bg-white border border-gray-200 p-8 shadow-sm rounded-sm mb-8">
+                    <h3 class="text-[10px] font-bold text-gray-400 uppercase mb-4 tracking-widest">Analysis Strategy</h3>
+                    <textarea id="prompt" rows="2" class="w-full text-2xl font-light border-none focus:ring-0 outline-none placeholder-gray-300" placeholder="What would you like to discover?"></textarea>
+                </div>
+
+                <div id="progress-container" class="hidden mb-8">
+                    <div class="flex justify-between text-[10px] font-bold text-gray-400 uppercase mb-2">
+                        <span id="progress-status">Initializing...</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 h-1">
+                        <div id="progress-bar" class="ikea-bg-blue h-1 progress-bar" style="width: 0%"></div>
                     </div>
                 </div>
-                <button onclick="run()" id="btn" class="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-2xl font-bold transition-all shadow-lg shadow-blue-900/20">🚀 ANALYZE DATA</button>
-            </div>
 
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700">
-                    <textarea id="prompt" rows="2" class="w-full bg-transparent text-xl text-center focus:outline-none placeholder-slate-600 italic" placeholder="Describe your goal... (e.g. Top 3 pain points)" onfocus="this.placeholder=''"></textarea>
-                </div>
-
-                <div id="loader" class="hidden text-center py-20">
-                    <div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-                    <p class="text-slate-500 animate-pulse text-xs uppercase tracking-widest font-mono">Gathering Evidence & Impact Data</p>
-                </div>
-
-                <div id="output" class="hidden space-y-6">
-                    <div class="bg-blue-600/10 border border-blue-500/20 p-6 rounded-3xl">
-                        <h3 class="text-blue-400 font-bold text-xs mb-2 uppercase">Executive Summary</h3>
-                        <p id="sum-text" class="text-slate-300 text-sm leading-relaxed italic"></p>
+                <div id="results" class="hidden space-y-8">
+                    <div class="border-l-4 border-blue-600 pl-6 py-2">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase mb-2">Executive Summary</h4>
+                        <p id="sum-text" class="text-lg text-gray-700 leading-relaxed font-light"></p>
                     </div>
-                    <div id="category-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    <div id="card-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
                 </div>
-            </div>
+            </main>
         </div>
     </div>
 
     <script>
-        function toggleDateVisibility() {
-            document.getElementById('custom_date_container').classList.toggle('hidden', document.getElementById('date_preset').value !== 'custom');
+        // --- SESSION PERSISTENCE ---
+        const fields = ['p_token', 'g_key', 's_id'];
+        fields.forEach(f => {
+            const val = sessionStorage.getItem(f);
+            if(val) document.getElementById(f).value = val;
+            document.getElementById(f).addEventListener('input', (e) => sessionStorage.setItem(f, e.target.value));
+        });
+
+        function toggleCustomDate() {
+            document.getElementById('custom_dates').classList.toggle('hidden', document.getElementById('date_preset').value !== 'custom');
         }
 
-        function calculateDates() {
-            const preset = document.getElementById('date_preset').value;
-            let from = new Date();
-            let to = new Date();
-            if (preset === 'today') { from.setHours(0,0,0,0); }
-            else if (preset === 'yesterday') { from.setDate(from.getDate()-1); from.setHours(0,0,0,0); to.setDate(to.getDate()-1); to.setHours(23,59,59); }
-            else if (['7', '30'].includes(preset)) { from.setDate(from.getDate() - parseInt(preset)); }
-            else if (preset === 'custom') { return { f: document.getElementById('date_from').value, t: document.getElementById('date_to').value }; }
-            return { f: from.toISOString().split('T')[0], t: to.toISOString().split('T')[0] };
+        async function updateProgress(percent, status) {
+            document.getElementById('progress-bar').style.width = percent + '%';
+            document.getElementById('progress-percent').innerText = percent + '%';
+            document.getElementById('progress-status').innerText = status;
         }
 
-        async function run() {
+        async function runAnalysis() {
             const btn = document.getElementById('btn');
-            const out = document.getElementById('output');
-            const loader = document.getElementById('loader');
-            const grid = document.getElementById('category-grid');
-            const dates = calculateDates();
+            const resDiv = document.getElementById('results');
+            const prog = document.getElementById('progress-container');
+            const grid = document.getElementById('card-grid');
 
             btn.disabled = true;
-            loader.classList.remove('hidden');
-            out.classList.add('hidden');
+            prog.classList.remove('hidden');
+            resDiv.classList.add('hidden');
             grid.innerHTML = "";
+
+            await updateProgress(20, 'Fetching Pulsar Data');
+
+            const preset = document.getElementById('date_preset').value;
+            let from = new Date(); let to = new Date();
+            if(preset === 'yesterday') { from.setDate(from.getDate()-1); to.setDate(to.getDate()-1); }
+            else if(preset !== 'custom') { from.setDate(from.getDate() - parseInt(preset)); }
+            else { from = new Date(document.getElementById('date_from').value); to = new Date(document.getElementById('date_to').value); }
 
             const payload = {
                 pulsar_token: document.getElementById('p_token').value,
                 groq_key: document.getElementById('g_key').value,
                 search_id: document.getElementById('s_id').value,
-                date_from: dates.f,
-                date_to: dates.t,
-                prompt: document.getElementById('prompt').value || "Analyze key brand themes"
+                date_from: from.toISOString().split('T')[0],
+                date_to: to.toISOString().split('T')[0],
+                prompt: document.getElementById('prompt').value || "General brand analysis"
             };
 
             try {
-                const res = await fetch('/api/analyze', {
+                const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
-                const data = await res.json();
                 
-                if (data.error) throw new Error(data.error);
+                await updateProgress(60, 'Synthesizing with AI');
+                const data = await response.json();
+                if(data.error) throw new Error(data.error);
 
-                document.getElementById('sum-text').innerText = data.summary || "No summary provided.";
+                await updateProgress(90, 'Formatting Insights');
+                document.getElementById('sum-text').innerText = data.summary;
                 
-                // SAFETY CHECK: Prevent the .forEach error
-                const categories = data.categories || [];
-                
-                categories.forEach(cat => {
+                data.categories.forEach(cat => {
                     const card = document.createElement('div');
-                    card.className = "bg-slate-800 p-5 rounded-2xl border border-slate-700 flex flex-col justify-between hover:border-blue-500 transition-all";
+                    card.className = "bg-white border border-gray-200 p-6 shadow-sm hover:shadow-md transition-shadow";
                     card.innerHTML = `
-                        <div>
-                            <div class="flex justify-between items-start mb-3">
-                                <span class="font-bold text-blue-400 text-sm">${cat.name}</span>
-                                <span class="text-[9px] px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold uppercase">Impact: ${cat.impact_score || 0}</span>
-                            </div>
-                            <p class="text-[10px] text-slate-500 mb-3 font-mono uppercase font-bold">${cat.count || 0} Mentions Identified</p>
-                            <code class="block text-[9px] bg-slate-900 p-2 rounded mb-4 text-slate-400 break-all border border-slate-700 font-mono">${cat.boolean || ""}</code>
+                        <div class="flex justify-between items-start mb-4">
+                            <h5 class="font-bold text-sm tracking-tight">${cat.name}</h5>
+                            <span class="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-1 uppercase">Impact: ${cat.impact}</span>
                         </div>
-                        <div class="pt-4 border-t border-slate-700 flex justify-between items-center">
-                            <a href="${cat.evidence}" target="_blank" class="text-[10px] text-blue-400 font-bold hover:underline">🔗 View Evidence</a>
-                            <button onclick="navigator.clipboard.writeText('${cat.boolean}')" class="text-[9px] bg-slate-700 px-3 py-1 rounded-lg hover:bg-slate-600 transition-colors uppercase font-bold">Copy Boolean</button>
+                        <div class="flex gap-3 text-[10px] font-semibold text-gray-400 mb-4 uppercase">
+                            <span>${cat.sentiment}</span><span>•</span><span>${cat.emotion}</span><span>•</span><span>${cat.count} Posts</span>
+                        </div>
+                        <code class="block text-[10px] bg-gray-50 p-3 text-gray-500 mb-4 border border-gray-100 truncate">${cat.boolean}</code>
+                        <div class="flex justify-between">
+                            <a href="${cat.url}" target="_blank" class="text-[10px] font-bold ikea-blue underline">VIEW EVIDENCE</a>
+                            <button onclick="navigator.clipboard.writeText('${cat.boolean}')" class="text-[10px] font-bold text-gray-400 hover:text-blue-600 uppercase tracking-tighter">Copy Boolean</button>
                         </div>
                     `;
                     grid.appendChild(card);
                 });
-                out.classList.remove('hidden');
+
+                await updateProgress(100, 'Complete');
+                setTimeout(() => { prog.classList.add('hidden'); resDiv.classList.remove('hidden'); }, 500);
             } catch (e) {
                 alert(e.message);
+                prog.classList.add('hidden');
             } finally {
-                loader.classList.add('hidden');
                 btn.disabled = false;
             }
         }
