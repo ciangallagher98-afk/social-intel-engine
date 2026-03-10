@@ -12,34 +12,36 @@
         .input-field { background: #000; border: 1px solid #262626; color: #fff; transition: all 0.2s; }
         .input-field:focus { border-color: var(--accent); outline: none; }
         .terminal-font { font-family: 'JetBrains Mono', monospace; }
+        .chat-scroll::-webkit-scrollbar { width: 4px; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: #262626; border-radius: 10px; }
     </style>
 </head>
 <body class="p-6 md:p-12 min-h-screen">
     <div class="max-w-6xl mx-auto">
         <header class="mb-10 border-b border-gray-900 pb-8 flex justify-between items-end">
             <div>
-                <h1 class="text-2xl font-extrabold tracking-tighter uppercase italic">Synthesis<span class="text-blue-500">.Alpha</span></h1>
-                <p class="text-[10px] text-gray-500 tracking-[0.3em] font-medium mt-1">NARRATIVE VISIBILITY PRIORITIZATION</p>
+                <h1 class="text-2xl font-extrabold tracking-tighter uppercase italic text-white">Synthesis<span class="text-blue-500">.Alpha</span></h1>
+                <p class="text-[10px] text-gray-500 tracking-[0.3em] font-medium mt-1">STRATEGIC NARRATIVE ENGINE</p>
             </div>
-            <div id="status-badge" class="px-4 py-1.5 rounded-full border border-gray-800 text-[10px] font-bold text-gray-500 tracking-widest uppercase">Idle</div>
+            <div id="status-badge" class="px-4 py-1.5 rounded-full border border-gray-800 text-[10px] font-bold text-gray-500 tracking-widest uppercase bg-black">Idle</div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <div class="lg:col-span-4 space-y-6">
                 <section class="card p-6">
-                    <h2 class="text-[11px] font-black text-blue-500 uppercase tracking-widest mb-4">01. Authentication</h2>
+                    <h2 class="text-[11px] font-black text-blue-500 uppercase tracking-widest mb-4">01. Credentials</h2>
                     <input id="p_token" type="password" placeholder="Pulsar Bearer Token" class="input-field w-full p-3 rounded-lg text-xs mb-3">
                     <input id="g_key" type="password" placeholder="Groq API Key" class="input-field w-full p-3 rounded-lg text-xs">
                 </section>
 
                 <section class="card p-6">
-                    <h2 class="text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-4">02. Search Target</h2>
-                    <input id="s_id" type="text" placeholder="Hex or Numeric Search ID" class="input-field w-full p-3 rounded-lg text-xs">
+                    <h2 class="text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-4">02. Search ID</h2>
+                    <input id="s_id" type="text" placeholder="Hex or Numeric ID" class="input-field w-full p-3 rounded-lg text-xs">
                 </section>
 
                 <section class="card p-6">
                     <h2 class="text-[11px] font-black text-purple-500 uppercase tracking-widest mb-4">03. Timeline</h2>
-                    <select id="date_range" onchange="checkCustom()" class="input-field w-full p-3 rounded-lg text-xs mb-3">
+                    <select id="date_range" onchange="checkCustom()" class="input-field w-full p-3 rounded-lg text-xs mb-3 cursor-pointer">
                         <option value="7" selected>Last 7 Days</option>
                         <option value="30">Last 30 Days</option>
                         <option value="90">Last 90 Days</option>
@@ -47,22 +49,25 @@
                         <option value="ytd">YTD</option>
                         <option value="custom">Manual Range...</option>
                     </select>
-                    <div id="custom_box" class="hidden grid grid-cols-2 gap-2"><input type="date" id="start_date" class="input-field p-2 rounded-lg text-[10px]"><input type="date" id="end_date" class="input-field p-2 rounded-lg text-[10px]"></div>
+                    <div id="custom_box" class="hidden grid grid-cols-2 gap-2">
+                        <input type="date" id="start_date" class="input-field p-2 rounded-lg text-[10px]">
+                        <input type="date" id="end_date" class="input-field p-2 rounded-lg text-[10px]">
+                    </div>
                 </section>
 
-                <button onclick="runIngest()" id="btn-main" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl transition-all">INITIALIZE INGESTION</button>
+                <button onclick="runIngest()" id="btn-main" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-xl shadow-lg transition-all active:scale-[0.98]">INITIALIZE INGESTION</button>
             </div>
 
             <div class="lg:col-span-8 space-y-6">
-                <div class="card bg-black h-40 p-4 terminal-font text-[11px] overflow-y-auto border-gray-800" id="console text-emerald-500">
-                    <span class="text-gray-600">// Awaiting deployment parameters...</span>
+                <div class="card bg-black h-44 p-5 terminal-font text-[11px] overflow-y-auto border-gray-800 text-emerald-500 leading-relaxed" id="console">
+                    <span class="text-gray-700">// Awaiting deployment parameters...</span>
                 </div>
 
                 <div id="chat-ui" class="hidden space-y-6">
-                    <div id="history" class="space-y-4 max-h-[400px] overflow-y-auto pr-2"></div>
+                    <div id="history" class="space-y-6 max-h-[500px] overflow-y-auto pr-3 chat-scroll"></div>
                     <div class="relative flex items-center">
-                        <input id="query" type="text" placeholder="Query the prioritized data..." class="w-full bg-[#0a0a0c] border border-gray-800 p-5 rounded-2xl pr-16 text-white outline-none">
-                        <button onclick="ask()" class="absolute right-3 bg-blue-600 p-3 rounded-xl">ASK</button>
+                        <input id="query" type="text" placeholder="Query the prioritized intelligence..." class="w-full bg-[#0a0a0c] border border-gray-800 p-5 rounded-2xl pr-20 text-white outline-none focus:border-blue-500 transition-colors">
+                        <button onclick="ask()" class="absolute right-3 bg-blue-600 p-3 rounded-xl hover:bg-blue-500 text-white font-bold text-xs px-5">ASK</button>
                     </div>
                 </div>
             </div>
@@ -75,11 +80,16 @@
         function calculateDates() {
             const range = document.getElementById('date_range').value;
             let f = new Date(); let t = new Date();
-            if (range === 'custom') { f = new Date(document.getElementById('start_date').value); t = new Date(document.getElementById('end_date').value); }
+            if (range === 'custom') { 
+                f = new Date(document.getElementById('start_date').value); 
+                t = new Date(document.getElementById('end_date').value); 
+            }
             else if (range === 'ytd') f = new Date(new Date().getFullYear(), 0, 1);
             else if (range === 'qtd') f = new Date(new Date().getFullYear(), Math.floor(new Date().getMonth() / 3) * 3, 1);
             else f.setDate(f.getDate() - parseInt(range));
-            return { from: f.toISOString().split('.')[0] + "Z", to: t.toISOString().split('.')[0] + "Z" };
+            
+            const iso = (d) => d.toISOString().split('.')[0] + "Z";
+            return { from: iso(f), to: iso(t) };
         }
 
         async function runIngest() {
@@ -88,38 +98,61 @@
             const status = document.getElementById('status-badge');
             
             btn.disabled = true;
-            status.innerText = "Processing";
-            con.innerHTML = `<div class="text-gray-500">[${new Date().toLocaleTimeString()}] Handshake Initialized...</div>`;
+            status.innerText = "Syncing...";
+            con.innerHTML = `<div class="text-gray-500">>> ${new Date().toLocaleTimeString()}: HANDSHAKE_INITIATED...</div>`;
 
             try {
                 const res = await fetch('/api/ingest', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ pulsar_token: document.getElementById('p_token').value, search_id: document.getElementById('s_id').value, ...calculateDates() })
+                    body: JSON.stringify({ 
+                        pulsar_token: document.getElementById('p_token').value, 
+                        search_id: document.getElementById('s_id').value, 
+                        ...calculateDates() 
+                    })
                 });
                 const data = await res.json();
                 if(data.status === "success") {
-                    con.innerHTML += `<div class="text-emerald-500">[${new Date().toLocaleTimeString()}] SUCCESS: ${data.count} nodes indexed.</div>`;
+                    con.innerHTML += `<div class="text-emerald-400">>> ${new Date().toLocaleTimeString()}: SUCCESS: ${data.count} visibility-weighted nodes captured.</div>`;
                     document.getElementById('chat-ui').classList.remove('hidden');
                     status.innerText = "Online";
-                } else { con.innerHTML += `<div class="text-red-500">[${new Date().toLocaleTimeString()}] ERROR: ${data.error || data.message}</div>`; }
-            } catch (e) { con.innerHTML += `<div class="text-red-500">CRITICAL FAILURE: ${e.message}</div>`; }
+                } else { 
+                    con.innerHTML += `<div class="text-red-500">>> ${new Date().toLocaleTimeString()}: ERROR: ${data.error || data.message}</div>`; 
+                }
+            } catch (e) { 
+                con.innerHTML += `<div class="text-red-600">>> CRITICAL_EXCEPTION: ${e.message}</div>`; 
+            }
             finally { btn.disabled = false; }
         }
 
         async function ask() {
             const q = document.getElementById('query').value;
+            const hist = document.getElementById('history');
             if(!q) return;
-            document.getElementById('history').innerHTML += `<div class="bg-gray-900/50 p-4 rounded-xl border border-gray-800 text-sm italic mb-4">Q: ${q}</div>`;
+            
+            hist.innerHTML += `<div class="flex justify-end"><div class="bg-blue-600/10 p-4 rounded-2xl rounded-tr-none border border-blue-600/20 text-sm text-blue-100 max-w-[80%]">${q}</div></div>`;
             document.getElementById('query').value = "";
-            const res = await fetch('/api/ask', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ search_id: document.getElementById('s_id').value, groq_key: document.getElementById('g_key').value, question: q })
-            });
-            const data = await res.json();
-            document.getElementById('history').innerHTML += `<div class="bg-blue-900/10 p-5 rounded-xl border border-blue-900/20 text-sm mb-4">${data.answer}</div>`;
-            document.getElementById('history').scrollTop = document.getElementById('history').scrollHeight;
+            hist.scrollTop = hist.scrollHeight;
+
+            try {
+                const res = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        search_id: document.getElementById('s_id').value, 
+                        groq_key: document.getElementById('g_key').value, 
+                        question: q 
+                    })
+                });
+                const data = await res.json();
+                hist.innerHTML += `<div class="flex justify-start"><div class="bg-white/5 p-5 rounded-2xl rounded-tl-none border border-white/10 text-sm text-gray-200 leading-relaxed max-w-[90%] prose prose-invert font-light">
+                    <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest block mb-2 opacity-70">Strategic Synthesis</span>
+                    ${data.answer.replace(/\n/g, '<br>')}
+                </div></div>`;
+            } catch (e) { 
+                hist.innerHTML += `<div class="text-red-500 text-[10px]">ANALYSIS_ERROR: Key verify failed.</div>`; 
+            }
+            hist.scrollTop = hist.scrollHeight;
         }
     </script>
 </body>
