@@ -1,6 +1,21 @@
-# ... [imports and setup remain the same]
+from flask import Flask, request, jsonify
+import requests
+from groq import Groq
+import json
 
-        # UPDATED QUERY: Removed { total } from engagement
+app = Flask(__name__)
+
+@app.route('/api/analyze', methods=['POST'])
+def analyze():
+    try:
+        data = request.json
+        p_token = data.get('pulsar_token')
+        g_key = data.get('groq_key')
+        s_id = data.get('search_id')
+        user_prompt = data.get('prompt')
+        date_from = data.get('date_from')
+        date_to = data.get('date_to')
+
         query = """
         query GetResults($filters:FilterInput!){
            results (filter:$filters){
@@ -16,23 +31,26 @@
            }
         }
         """
-        # ... [variables and headers]
+        variables = {"filters": {"searchIds": [s_id], "dateFrom": f"{date_from}T00:00:00Z", "dateTo": f"{date_to}T23:59:59Z"}}
+        headers = {"Authorization": f"Bearer {p_token}", "Content-Type": "application/json"}
         
-        pulsar_res = requests.post("https://data.pulsarplatform.com/graphql/trac", 
-                                    json={"query": query, "variables": variables}, headers=headers)
-        
+        pulsar_res = requests.post("https://data.pulsarplatform.com/graphql/trac", json={"query": query, "variables": variables}, headers=headers)
         posts = pulsar_res.json().get('data', {}).get('results', {}).get('results', [])
 
-        # Prepare enriched data for the LLM
-        context_items = []
-        for p in posts[:50]:
-            context_items.append({
-                "text": p.get('content')[:180],
-                "sent": p.get('sentiment'),
-                "emo": p.get('emotion'),
-                "impact": p.get('visibility', 0),
-                "eng": p.get('engagement', 0), # Now treating as a direct value
-                "url": p.get('contentUrl')
-            })
+        if not posts:
+            return jsonify({"error": "No data found for the selected range."}), 404
 
-# ... [rest of the file remains the same]
+        context_items = [{"text": p.get('content')[:180], "sent": p.get('sentiment'), "emo": p.get('emotion'), "impact": p.get('visibility', 0), "eng": p.get('engagement', 0), "url": p.get('contentUrl')} for p in posts[:50]]
+
+        client = Groq(api_key=g_key)
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": "Return JSON with 'summary' and a 'categories' array containing: name, count, sentiment, emotion, boolean, impact, and url."},
+                {"role": "user", "content": f"Task: {user_prompt}\n\nData: {json.dumps(context_items)}"}
+            ]
+        )
+        return jsonify(json.loads(completion.choices[0].message.content))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
