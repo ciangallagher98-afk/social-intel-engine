@@ -33,7 +33,7 @@ def ingest():
               engagement
               sentiment
               emotion
-              topic
+              
             }
           }
         }
