@@ -7,20 +7,23 @@ from groq import Groq
 app = Flask(__name__)
 knowledge_base = {}
 
+def safe_encode(text):
+    """Deep cleans strings to prevent encoding crashes."""
+    if not text: return ""
+    # Remove problematic characters like \u2028 (Line Separator) and \u2029
+    return text.replace('\u2028', ' ').replace('\u2029', ' ').encode('utf-8', 'ignore').decode('utf-8')
+
 @app.route('/api/ingest', methods=['POST'])
 def ingest():
     try:
         data = request.get_json(force=True)
         s_id = str(data.get('search_id'))
         p_token = data.get('pulsar_token')
-        d_from = data.get('from')
-        d_to = data.get('to')
+        d_from, d_to = data.get('from'), data.get('to')
         
         def generate():
             total = 0
             knowledge_base[s_id] = []
-            
-            # Initial Heartbeat to prove connection is live
             yield f"data: {json.dumps({'status': 'active', 'log': 'Connection Established...'})}\n\n"
 
             for page in range(20):
@@ -39,40 +42,47 @@ def ingest():
                   }
                 }
                 """
-                vars = {"f": {"searchIds": [s_id], "dateFrom": d_from, "dateTo": d_to}}
+                variables = {"f": {"searchIds": [s_id], "dateFrom": d_from, "dateTo": d_to}}
                 
                 try:
-                    r = requests.post("https://data.pulsarplatform.com/graphql/trac", 
-                                     json={"query": query, "variables": vars}, 
-                                     headers={"Authorization": f"Bearer {p_token}"},
-                                     timeout=45)
+                    # FIX: Explicitly set encoding to utf-8 in the request
+                    r = requests.post(
+                        "https://data.pulsarplatform.com/graphql/trac", 
+                        json={"query": query, "variables": variables}, 
+                        headers={
+                            "Authorization": f"Bearer {p_token}",
+                            "Content-Type": "application/json; charset=utf-8"
+                        },
+                        timeout=45
+                    )
                     
                     if r.status_code != 200:
                         yield f"data: {json.dumps({'status': 'error', 'log': f'API Error: {r.status_code}'})}\n\n"
                         break
 
+                    # FIX: Ensure we read the response as UTF-8
+                    r.encoding = 'utf-8'
                     res_json = r.json()
-                    # Check for GraphQL specific errors
-                    if "errors" in res_json:
-                        err_msg = res_json['errors'][0].get('message', 'Unknown GraphQL Error')
-                        yield f"data: {json.dumps({'status': 'error', 'log': f'GraphQL: {err_msg}'})}\n\n"
-                        break
-
+                    
                     batch = res_json.get('data', {}).get('results', {}).get('results', [])
+                    if not batch: break
                     
-                    if not batch:
-                        yield f"data: {json.dumps({'status': 'log', 'log': 'No more data found for this page.'})}\n\n"
-                        break
-                    
-                    total += len(batch)
-                    knowledge_base[s_id].extend(batch)
+                    # Clean the content of each post before storing
+                    cleaned_batch = []
+                    for post in batch:
+                        post['content'] = safe_encode(post.get('content', ''))
+                        cleaned_batch.append(post)
+
+                    total += len(cleaned_batch)
+                    knowledge_base[s_id].extend(cleaned_batch)
                     
                     progress = int(((page + 1) / 20) * 100)
-                    yield f"data: {json.dumps({'status': 'ingesting', 'count': total, 'progress': progress, 'log': f'Collected {total} posts...'})}\n\n"
-                    time.sleep(0.5)
+                    yield f"data: {json.dumps({'status': 'ingesting', 'count': total, 'progress': progress, 'log': f'Indexed {total} posts...'})}\n\n"
+                    time.sleep(0.4)
                     
                 except Exception as inner_e:
-                    yield f"data: {json.dumps({'status': 'error', 'log': f'Network: {str(inner_e)}'})}\n\n"
+                    # Log the specific error to the UI console
+                    yield f"data: {json.dumps({'status': 'error', 'log': f'Parsing Error: {str(inner_e)}'})}\n\n"
                     break
                     
             yield f"data: {json.dumps({'status': 'complete', 'total': total})}\n\n"
@@ -83,5 +93,32 @@ def ingest():
 
 @app.route('/api/ask', methods=['POST'])
 def ask():
-    # ... (Ask logic remains same as previous working version)
-    pass # Use previous ask logic here
+    try:
+        data = request.get_json(force=True)
+        s_id, query, g_key = str(data.get('search_id')), data.get('question'), data.get('groq_key')
+        
+        dataset = knowledge_base.get(s_id, [])
+        if not dataset: return jsonify({"error": "Knowledge base empty."}), 400
+
+        # Create the AI context
+        context = []
+        for p in dataset[:500]:
+            analysis = p.get('analysis', {}) or {}
+            context.append({
+                "t": p.get('content', '')[:160],
+                "sent": analysis.get('sentiment', {}).get('label') if analysis.get('sentiment') else "N/A",
+                "emo": [e.get('label') for e in analysis.get('emotions', [])[:1]],
+                "topics": [t.get('label') for t in analysis.get('topics', [])[:2]]
+            })
+            
+        client = Groq(api_key=g_key)
+        chat = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are Gemini Intelligence. Analyze the provided dataset for trends in emotions and topics. Use Markdown."},
+                {"role": "user", "content": f"Context: {json.dumps(context)}\n\nQuestion: {query}"}
+            ]
+        )
+        return jsonify({"answer": chat.choices[0].message.content})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
