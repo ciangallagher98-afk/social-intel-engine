@@ -5,7 +5,6 @@ import json
 
 app = Flask(__name__)
 
-# Standard UTF-8 / Latin-1 safety
 def deep_clean(obj):
     if isinstance(obj, str):
         return obj.encode('utf-8', 'ignore').decode('utf-8').replace('\u2028', ' ').replace('\u2029', ' ')
@@ -18,60 +17,55 @@ def analyze():
     try:
         raw_data = request.get_json(force=True)
         data = deep_clean(raw_data)
-        brands = [b.strip() for b in data.get('prompt', '').split(',') if len(b) > 2] # User provides brands like "Smirnoff, Absolut"
         
-        # ... (standard pulsar_res setup here) ...
-        pulsar_res = requests.post(
-            "https://data.pulsarplatform.com/graphql/trac", 
-            json={"query": query, "variables": variables}, 
-            headers={"Authorization": f"Bearer {p_token}", "Content-Type": "application/json; charset=utf-8"}
-        )
+        # Extract brands from the prompt (e.g., "Smirnoff, Absolut")
+        brands = [b.strip() for b in data.get('prompt', '').split(',') if len(b) > 2]
+        if not brands: brands = ["Brand A", "Brand B"] # Fallback
+
+        p_token, g_key, s_id = data.get('pulsar_token'), data.get('groq_key'), str(data.get('search_id'))
+        p_start, p_end = f"{data.get('date_from')}T00:00:00Z", f"{data.get('date_to')}T23:59:59Z"
+
+        query = "query G($f:FilterInput!){results(filter:$f){results{content visibility engagement source}}}"
+        variables = {"f": {"searchIds": [s_id], "dateFrom": p_start, "dateTo": p_end}}
         
-        posts = deep_clean(pulsar_res.json()).get('data', {}).get('results', {}).get('results', [])
+        p_res = requests.post("https://data.pulsarplatform.com/graphql/trac", 
+                             json={"query": query, "variables": variables}, 
+                             headers={"Authorization": f"Bearer {p_token}", "Content-Type": "application/json; charset=utf-8"})
+        
+        posts = deep_clean(p_res.json()).get('data', {}).get('results', {}).get('results', [])
         if not posts: return jsonify({"error": "No data found."}), 404
 
-        # 1. Advanced Brand & Source Mapping
-        brand_data = {}
+        # 1. Map Brands & Channels
+        brand_map = {}
         for p in posts:
             content = p.get('content', '').lower()
             source = p.get('source', 'Web')
-            # Assign post to a brand (first match logic)
-            matched_brand = "General"
+            matched = "Other"
             for b in brands:
-                if b.lower() in content:
-                    matched_brand = b
-                    break
+                if b.lower() in content: matched = b; break
             
-            if matched_brand not in brand_data:
-                brand_data[matched_brand] = {"count": 0, "sources": {}}
-            
-            brand_data[matched_brand]["count"] += 1
-            brand_data[matched_brand]["sources"][source] = brand_data[matched_brand]["sources"].get(source, 0) + 1
+            if matched not in brand_map: brand_map[matched] = {"count": 0, "sources": {}}
+            brand_map[matched]["count"] += 1
+            brand_map[matched]["sources"][source] = brand_map[matched]["sources"].get(source, 0) + 1
 
-        # 2. Strategic Sorting (Weighted Impact)
-        for p in posts:
-            p['impact_calc'] = (p.get('visibility', 0) * 0.6) + (p.get('engagement', 0) * 0.4)
-        
-        top_posts = sorted(posts, key=lambda x: x['impact_calc'], reverse=True)[:500]
-        context = [{"t": p.get('content')[:160], "s": p.get('source'), "i": round(p['impact_calc'])} for p in top_posts]
+        # 2. Weighted Impact Sorting
+        for p in posts: p['w'] = (p.get('visibility', 0) * 0.6) + (p.get('engagement', 0) * 0.4)
+        top = sorted(posts, key=lambda x: x['w'], reverse=True)[:500]
+        context = [{"t": p.get('content')[:160], "s": p.get('source')} for p in top]
 
-        # 3. AI Analysis
+        # 3. AI Strategic Summary
         client = Groq(api_key=g_key)
-        completion = client.chat.completions.create(
+        chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "Analyze competitor data. Identify 4 themes. For each theme provide: title, summary, impact, offensive, defensive."},
-                {"role": "user", "content": f"Analyze: {data.get('prompt')}\n\nData: {json.dumps(context)}"}
+                {"role": "system", "content": "Return JSON: {executive_summary: string, themes: [{title, summary, impact, offensive, defensive}]}"},
+                {"role": "user", "content": f"Analyze: {json.dumps(context)}"}
             ]
         )
 
-        final_response = json.loads(completion.choices[0].message.content)
-        final_response['brand_sov'] = brand_data # Send the complex SOV map to the UI
-        
-        return app.response_class(
-            response=json.dumps(deep_clean(final_response)),
-            status=200, mimetype='application/json; charset=utf-8'
-        )
+        res = json.loads(chat.choices[0].message.content)
+        res['brand_sov'] = brand_map # CRITICAL: Ensure this key exists
+        return app.response_class(response=json.dumps(deep_clean(res)), status=200, mimetype='application/json')
     except Exception as e:
         return jsonify({"error": str(e)}), 500
