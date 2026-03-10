@@ -18,7 +18,7 @@ def ingest():
     try:
         data = request.get_json(force=True)
         
-        # Accept Hex ID as string
+        # Accept Hex ID as string to prevent int() conversion errors
         s_id = str(data.get('search_id')).strip()
         p_token = data.get('pulsar_token')
         
@@ -26,7 +26,7 @@ def ingest():
         d_from = data.get('from')
         d_to = data.get('to')
 
-        # NESTED SCHEMA FIX: limit/offset/sort belong to the inner results field
+        # NESTED SCHEMA FIX: Arguments belong to the inner results field
         query = """
         query GetPulsarData($f: FilterInput!) {
           results(filter: $f) {
@@ -51,6 +51,7 @@ def ingest():
             }
         }
         
+        # Force UTF-8 encoding for the payload
         payload = json.dumps({"query": query, "variables": variables}).encode('utf-8')
         
         r = requests.post(
@@ -69,7 +70,7 @@ def ingest():
             error_msg = res_json['errors'][0].get('message', 'GraphQL Error')
             return jsonify({"error": error_msg}), 400
 
-        # Extract from nested results: data.results.results
+        # Targeted extraction: data -> results (wrapper) -> results (list)
         batch = res_json.get('data', {}).get('results', {}).get('results', [])
         
         if not batch:
@@ -102,9 +103,9 @@ def ask():
 
         dataset = knowledge_base.get(s_id, [])
         if not dataset:
-            return jsonify({"answer": "Error: Knowledge base empty."}), 400
+            return jsonify({"answer": "Error: Knowledge base empty. Please run ingestion."}), 400
 
-        # Pack top 150 most visible posts as context
+        # Pack top 150 most visible posts as context for Groq
         context = []
         for p in dataset[:150]:
             context.append({
@@ -119,7 +120,7 @@ def ask():
         chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are Gemini Intelligence. Analyze these high-visibility posts. Group insights by Emotion and Reach."},
+                {"role": "system", "content": "You are Gemini Intelligence. Analyze these high-visibility posts. Group insights by Emotion, Topic, and Reach using Markdown."},
                 {"role": "user", "content": f"Data: {json.dumps(context)}\n\nQuery: {query}"}
             ],
             temperature=0.3
