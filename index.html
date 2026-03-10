@@ -2,82 +2,77 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pulsar Pro | Strategic Insights</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulsar Pro | Strategy Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111; letter-spacing: -0.01em; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #111; }
         .ikea-blue { background-color: #0058a3; }
         .ikea-text { color: #0058a3; }
-        .border-soft { border-color: #f2f2f2; }
-        .transition-slow { transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
+        .border-soft { border-color: #f3f3f3; }
     </style>
 </head>
 <body class="p-6 md:p-20">
-    <div class="max-w-5xl mx-auto">
-        <header class="flex justify-between items-center mb-24 border-b border-soft pb-12">
-            <div>
-                <h1 class="text-2xl font-black tracking-tighter ikea-text uppercase italic">Pulsar <span class="text-gray-300 font-normal not-italic lowercase">Pro</span></h1>
-            </div>
-            <div class="flex gap-4 items-center">
-                <span class="text-[9px] font-bold text-emerald-500 bg-emerald-50 px-2 py-1 uppercase tracking-widest">Live Engine</span>
-                <span class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">v4.0</span>
+    <div class="max-w-6xl mx-auto">
+        <header class="flex justify-between items-center mb-20 border-b border-soft pb-10">
+            <h1 class="text-2xl font-black tracking-tighter ikea-text uppercase italic">Pulsar <span class="text-gray-300 font-normal not-italic lowercase">Pro</span></h1>
+            <div class="flex gap-4 items-center font-bold text-[9px] text-gray-400 uppercase tracking-widest">
+                <span class="flex h-2 w-2 rounded-full bg-blue-500"></span> Engine Active
             </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-16">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-20">
             <aside class="lg:col-span-1 space-y-12">
-                <div class="space-y-4">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Setup</label>
+                <section class="space-y-4">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Authentication</label>
                     <input id="p_token" type="password" placeholder="Pulsar Token" class="w-full p-4 border border-soft rounded-lg text-sm outline-none focus:border-blue-500">
-                    <input id="g_key" type="password" placeholder="Groq Key" class="w-full p-4 border border-soft rounded-lg text-sm outline-none">
+                    <input id="g_key" type="password" placeholder="Groq Key" class="w-full p-4 border border-soft rounded-lg text-sm outline-none focus:border-blue-500">
                     <input id="s_id" type="text" placeholder="Search UID" class="w-full p-4 border border-soft rounded-lg text-sm outline-none">
-                </div>
+                </section>
 
-                <div class="space-y-4">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Data Window</label>
-                    <select id="date_preset" onchange="toggleDate()" class="w-full p-4 bg-white border border-soft rounded-lg text-sm outline-none appearance-none">
+                <section class="space-y-4">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Reporting Period</label>
+                    <select id="date_preset" onchange="toggleDate()" class="w-full p-4 bg-gray-50 border border-soft rounded-lg text-sm outline-none appearance-none">
                         <option value="1">Yesterday</option>
                         <option value="7" selected>Last 7 Days</option>
                         <option value="30">Last 30 Days</option>
-                        <option value="custom">Custom Range...</option>
+                        <option value="qtd">Quarter to Date</option>
+                        <option value="ytd">Year to Date</option>
+                        <option value="custom">Custom...</option>
                     </select>
                     <div id="custom_ui" class="hidden space-y-2">
                         <input id="date_from" type="date" class="w-full p-3 border border-soft text-xs rounded-lg">
                         <input id="date_to" type="date" class="w-full p-3 border border-soft text-xs rounded-lg">
                     </div>
-                </div>
+                </section>
 
-                <button onclick="run()" id="btn" class="w-full py-5 ikea-blue text-white font-bold text-[10px] tracking-[0.2em] rounded-lg hover:opacity-90 transition-slow uppercase">Generate Summary</button>
+                <button onclick="run()" id="btn" class="w-full py-5 ikea-blue text-white font-bold text-[10px] tracking-widest rounded-lg hover:opacity-90 transition-all uppercase">Generate Insights</button>
             </aside>
 
             <main class="lg:col-span-3">
-                <div class="mb-16">
-                    <textarea id="prompt" rows="2" class="w-full text-4xl font-light border-none focus:ring-0 outline-none placeholder-gray-200" placeholder="Analyze main themes from yesterday..."></textarea>
-                </div>
+                <textarea id="prompt" rows="2" class="w-full text-4xl font-light border-none focus:ring-0 outline-none placeholder-gray-100 mb-12" placeholder="Describe your goal..."></textarea>
 
                 <div id="prog_wrap" class="hidden mb-16">
-                    <div class="flex justify-between items-end mb-4">
-                        <span id="prog_msg" class="text-[9px] font-bold ikea-text uppercase tracking-[0.2em]">Processing Signals</span>
-                        <span id="prog_val" class="text-3xl font-black ikea-text italic">0%</span>
+                    <div class="flex justify-between items-end mb-4 font-bold text-[9px] ikea-text uppercase tracking-widest">
+                        <span id="prog_msg">Clustering Data</span><span id="prog_val">0%</span>
                     </div>
-                    <div class="w-full bg-gray-50 h-[2px]"><div id="prog_bar" class="ikea-blue h-[2px] transition-slow" style="width:0%"></div></div>
+                    <div class="w-full bg-gray-50 h-[2px]"><div id="prog_bar" class="ikea-blue h-[2px] transition-all duration-1000" style="width:0%"></div></div>
                 </div>
 
-                <div id="output" class="hidden space-y-20">
-                    <section>
-                        <h4 class="text-[9px] font-bold text-gray-400 uppercase mb-6 tracking-widest">Executive Intelligence</h4>
-                        <p id="sum-text" class="text-2xl text-gray-800 font-light leading-snug"></p>
-                    </section>
-
-                    <div id="grid" class="grid grid-cols-1 gap-12"></div>
+                <div id="output" class="hidden space-y-24">
+                    <div class="max-w-2xl">
+                        <h4 class="text-[10px] font-bold text-gray-300 uppercase mb-6 tracking-widest">Executive Summary</h4>
+                        <p id="sum-text" class="text-2xl text-gray-800 font-light leading-snug italic"></p>
+                    </div>
+                    <div id="grid" class="grid grid-cols-1 gap-16"></div>
                 </div>
             </main>
         </div>
     </div>
 
     <script>
-        // Store keys
+        // Store Keys
         ['p_token', 'g_key', 's_id'].forEach(id => {
             const val = sessionStorage.getItem(id);
             if(val) document.getElementById(id).value = val;
@@ -86,27 +81,26 @@
 
         function toggleDate() { document.getElementById('custom_ui').classList.toggle('hidden', document.getElementById('date_preset').value !== 'custom'); }
 
-        async function updateProgress(val, msg) {
-            document.getElementById('prog_bar').style.width = val + '%';
-            document.getElementById('prog_val').innerText = val + '%';
-            document.getElementById('prog_msg').innerText = msg;
-        }
-
         async function run() {
             const btn = document.getElementById('btn');
             const wrap = document.getElementById('prog_wrap');
+            const bar = document.getElementById('prog_bar');
             const grid = document.getElementById('grid');
             const out = document.getElementById('output');
             
             btn.disabled = true; wrap.classList.remove('hidden'); out.classList.add('hidden');
             grid.innerHTML = "";
 
-            await updateProgress(25, "Scanning Trac Results");
-
+            // Date Calculations
             const preset = document.getElementById('date_preset').value;
             let f = new Date(); let t = new Date();
-            if(preset !== 'custom') f.setDate(f.getDate() - parseInt(preset));
+            if(preset === '1') { f.setDate(f.getDate()-1); t.setDate(t.getDate()-1); }
+            else if(preset === 'qtd') { f = new Date(f.getFullYear(), Math.floor(f.getMonth()/3)*3, 1); }
+            else if(preset === 'ytd') { f = new Date(f.getFullYear(), 0, 1); }
+            else if(preset !== 'custom') { f.setDate(f.getDate() - parseInt(preset)); }
             else { f = new Date(document.getElementById('date_from').value); t = new Date(document.getElementById('date_to').value); }
+
+            document.getElementById('prog_val').innerText = "20%"; bar.style.width = "20%";
 
             try {
                 const res = await fetch('/api/analyze', {
@@ -122,30 +116,29 @@
                     })
                 });
 
-                await updateProgress(75, "Clustering Themes");
+                bar.style.width = "80%";
                 const data = await res.json();
                 if(data.error) throw new Error(data.error);
 
-                await updateProgress(100, "Ready");
                 document.getElementById('sum-text').innerText = data.executive_summary;
-
                 data.themes.forEach(theme => {
                     const card = document.createElement('div');
-                    card.className = "group border-l-2 border-gray-50 pl-10 py-2 hover:border-blue-600 transition-slow";
+                    card.className = "border-l border-gray-100 pl-10 py-2 hover:border-blue-600 transition-all duration-500";
                     card.innerHTML = `
                         <div class="flex justify-between items-baseline mb-4">
-                            <h5 class="text-xl font-bold tracking-tight">${theme.title}</h5>
-                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Impact ${theme.impact_level}</span>
+                            <h5 class="text-xl font-bold">${theme.title}</h5>
+                            <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">Score ${theme.impact_level}</span>
                         </div>
                         <p class="text-gray-500 font-light leading-relaxed mb-6 max-w-2xl">${theme.summary}</p>
                         <div class="flex gap-8 items-center">
-                            <a href="${theme.top_post_url}" target="_blank" class="text-[10px] font-bold ikea-text border-b border-blue-500 pb-1 uppercase tracking-widest hover:text-blue-800 transition-colors">View Primary Evidence</a>
+                            <a href="${theme.top_post_url}" target="_blank" class="text-[10px] font-bold ikea-text border-b border-blue-500 pb-1 uppercase tracking-widest">Evidence</a>
                             <span class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">Driver: ${theme.key_driver}</span>
                         </div>
                     `;
                     grid.appendChild(card);
                 });
 
+                bar.style.width = "100%";
                 setTimeout(() => { wrap.classList.add('hidden'); out.classList.remove('hidden'); }, 800);
             } catch (e) {
                 alert(e.message);
