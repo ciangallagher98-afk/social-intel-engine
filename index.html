@@ -2,229 +2,178 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INTEL.MCP | Strategy Terminal</title>
+    <title>GEMINI | Strategic Ingestion Core</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;500&family=Space+Grotesk:wght@300;700&display=swap');
-        
-        :root { --neon-blue: #3b82f6; --dark-bg: #050507; }
-        body { background: var(--dark-bg); color: #a1a1aa; font-family: 'Space Grotesk', sans-serif; overflow-x: hidden; }
-        
-        .glass { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); }
-        .terminal { font-family: 'JetBrains Mono', monospace; background: #000; border: 1px solid #1a1a1c; scrollbar-width: thin; }
-        .input-dark { background: #0a0a0c; border: 1px solid #1a1a1c; color: white; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .input-dark:focus { border-color: var(--neon-blue); outline: none; box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
-        
-        .neon-text { color: var(--neon-blue); text-shadow: 0 0 12px rgba(59, 130, 246, 0.4); }
-        .glow-bar { box-shadow: 0 0 15px var(--neon-blue); }
-        
-        @keyframes pulse-border { 
-            0% { border-color: rgba(59, 130, 246, 0.2); } 
-            50% { border-color: rgba(59, 130, 246, 0.6); } 
-            100% { border-color: rgba(59, 130, 246, 0.2); } 
-        }
-        .ingesting { animation: pulse-border 2s infinite; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono&display=swap');
+        :root { --accent: #3b82f6; --bg: #030303; }
+        body { background: var(--bg); color: #e5e7eb; font-family: 'Inter', sans-serif; }
+        .card { background: #0a0a0c; border: 1px solid #1a1a1c; border-radius: 1rem; }
+        .input-field { background: #000; border: 1px solid #262626; color: #fff; transition: all 0.2s; }
+        .input-field:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); }
+        .terminal-font { font-family: 'JetBrains Mono', monospace; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
-<body class="p-6 lg:p-12 min-h-screen">
-
-    <div class="max-w-5xl mx-auto">
-        <header class="mb-12 flex justify-between items-end border-b border-gray-900 pb-8">
+<body class="p-4 md:p-12 min-h-screen">
+    <div class="max-w-6xl mx-auto">
+        
+        <div class="flex items-center justify-between mb-10 border-b border-gray-900 pb-8">
             <div>
-                <h1 class="text-4xl font-bold tracking-tighter text-white italic">INTEL<span class="neon-text">.MCP</span></h1>
-                <p class="text-[10px] uppercase tracking-[0.5em] text-gray-600 mt-2 font-bold">Autonomous Narrative Engine v4.2</p>
+                <h1 class="text-2xl font-extrabold tracking-tighter uppercase italic">Synthesis<span class="text-blue-500">.Alpha</span></h1>
+                <p class="text-[10px] text-gray-500 tracking-[0.3em] font-medium mt-1">NARRATIVE VISIBILITY PRIORITIZATION ENGINE</p>
             </div>
-            <div id="sys-status" class="flex items-center gap-3">
-                <span class="h-2 w-2 rounded-full bg-gray-800" id="status-led"></span>
-                <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest" id="status-text">Standby</span>
-            </div>
-        </header>
+            <div id="status-badge" class="px-4 py-1.5 rounded-full border border-gray-800 text-[10px] font-bold text-gray-500 tracking-widest uppercase bg-black">Idle</div>
+        </div>
 
-        <div id="config-panel" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div class="space-y-4">
-                <label class="text-[10px] uppercase font-black text-gray-700 tracking-widest ml-1">Authentication</label>
-                <input id="p_token" type="password" placeholder="Pulsar Token" class="input-dark w-full p-4 rounded-2xl text-xs">
-                <input id="g_key" type="password" placeholder="Groq API Key" class="input-dark w-full p-4 rounded-2xl text-xs">
-            </div>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            <div class="space-y-4">
-                <label class="text-[10px] uppercase font-black text-gray-700 tracking-widest ml-1">Dataset Target</label>
-                <input id="s_id" type="text" placeholder="Search ID (Numbers Only)" class="input-dark w-full p-4 rounded-2xl text-xs">
-                <select id="date_range" onchange="toggleDate()" class="input-dark w-full p-4 rounded-2xl text-xs cursor-pointer">
-                    <option value="7" selected>Last 7 Days</option>
-                    <option value="14">Last 14 Days</option>
-                    <option value="30">Last 30 Days</option>
-                    <option value="ytd">Year to Date (YTD)</option>
-                    <option value="custom">Custom Range...</option>
-                </select>
-            </div>
+            <div class="lg:col-span-4 space-y-6">
+                
+                <section class="card p-6">
+                    <h2 class="text-[11px] font-black text-blue-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <span class="w-1 h-3 bg-blue-500 rounded-full"></span> 01. Authentication
+                    </h2>
+                    <div class="space-y-4">
+                        <input id="p_token" type="password" placeholder="Pulsar Bearer Token" class="input-field w-full p-3 rounded-lg text-xs">
+                        <input id="g_key" type="password" placeholder="Groq API Key" class="input-field w-full p-3 rounded-lg text-xs">
+                    </div>
+                </section>
 
-            <div class="flex flex-col justify-end">
-                <button onclick="runIngest()" id="btn-main" class="w-full h-[116px] bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl transition-all flex flex-col items-center justify-center shadow-xl group">
-                    <span class="text-[11px] uppercase tracking-[0.2em] mb-1">Initialize Ingest</span>
-                    <span class="text-[8px] opacity-60 font-medium">ESTIMATED WINDOW: 15 MINS</span>
+                <section class="card p-6">
+                    <h2 class="text-[11px] font-black text-emerald-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <span class="w-1 h-3 bg-emerald-500 rounded-full"></span> 02. Search Target
+                    </h2>
+                    <div class="space-y-4">
+                        <input id="s_id" type="text" placeholder="TRAC Search ID" class="input-field w-full p-3 rounded-lg text-xs">
+                    </div>
+                </section>
+
+                <section class="card p-6">
+                    <h2 class="text-[11px] font-black text-purple-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <span class="w-1 h-3 bg-purple-500 rounded-full"></span> 03. Timeline
+                    </h2>
+                    <div class="space-y-4">
+                        <select id="date_range" onchange="checkCustom()" class="input-field w-full p-3 rounded-lg text-xs cursor-pointer">
+                            <optgroup label="Standard" class="bg-black">
+                                <option value="1">Last 24 Hours</option>
+                                <option value="7" selected>Last 7 Days</option>
+                                <option value="30">Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                            </optgroup>
+                            <optgroup label="Fiscal/Cumulative" class="bg-black">
+                                <option value="qtd">Quarter to Date (QTD)</option>
+                                <option value="ytd">Year to Date (YTD)</option>
+                                <option value="custom">Manual Range...</option>
+                            </optgroup>
+                        </select>
+                        <div id="custom_box" class="hidden grid grid-cols-2 gap-2 mt-2">
+                            <input type="date" id="start_date" class="input-field p-2 rounded-lg text-[10px]">
+                            <input type="date" id="end_date" class="input-field p-2 rounded-lg text-[10px]">
+                        </div>
+                    </div>
+                </section>
+
+                <button onclick="runIngest()" id="btn-main" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]">
+                    INITIALIZE INGESTION
                 </button>
             </div>
-        </div>
 
-        <div id="custom_picker" class="hidden grid grid-cols-2 gap-4 mb-12 animate-in fade-in duration-500">
-            <div class="space-y-2">
-                <label class="text-[9px] text-gray-600 uppercase font-bold ml-1">Start Date</label>
-                <input type="date" id="start_date" class="input-dark w-full p-4 rounded-2xl text-xs">
-            </div>
-            <div class="space-y-2">
-                <label class="text-[9px] text-gray-600 uppercase font-bold ml-1">End Date</label>
-                <input type="date" id="end_date" class="input-dark w-full p-4 rounded-2xl text-xs">
-            </div>
-        </div>
-
-        <div id="status-panel" class="hidden space-y-6 mb-16">
-            <div class="flex justify-between items-center text-[10px] font-black terminal-text">
-                <div class="flex items-center gap-4">
-                    <span class="text-blue-500">CRAWLER STATUS: <span id="current-op" class="text-white">ACTIVE</span></span>
-                    <span class="text-gray-800">|</span>
-                    <span class="text-gray-500">PACKETS INDEXED: <span id="post-count" class="text-white">0</span></span>
+            <div class="lg:col-span-8 space-y-6">
+                
+                <div class="card bg-black h-40 p-4 terminal-font text-[11px] overflow-y-auto border-gray-800" id="console">
+                    <span class="text-gray-600">// Awaiting deployment parameters...</span>
                 </div>
-                <span id="prog-val" class="neon-text">0%</span>
-            </div>
-            <div class="w-full bg-gray-900/50 h-1.5 rounded-full overflow-hidden">
-                <div id="prog-bar" class="bg-blue-600 h-full transition-all duration-700 glow-bar" style="width:0%"></div>
-            </div>
-            <div id="console" class="terminal p-6 text-[11px] text-emerald-500/80 h-48 overflow-y-auto rounded-3xl leading-relaxed"></div>
-        </div>
 
-        <div id="chat-section" class="hidden opacity-0 transition-all duration-1000">
-             <div id="history" class="space-y-8 mb-16 min-h-[200px]"></div>
-             <div class="relative glass rounded-[40px] p-2 flex items-center border-gray-800 shadow-2xl">
-                 <input id="query" type="text" placeholder="Ask about specific emotions, topics, or trends..." class="flex-1 bg-transparent p-6 text-xl font-light outline-none text-white placeholder-gray-700">
-                 <button onclick="askQuestion()" class="bg-blue-600 p-6 rounded-[32px] hover:bg-blue-500 transition-all mr-2 shadow-lg">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                 </button>
-             </div>
+                <div id="chat-ui" class="hidden space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div id="history" class="space-y-4 max-h-[400px] overflow-y-auto pr-2"></div>
+                    
+                    <div class="relative flex items-center">
+                        <input id="query" type="text" placeholder="Query the visibility-prioritized data..." 
+                            class="w-full bg-[#0a0a0c] border border-gray-800 p-5 rounded-2xl pr-16 focus:border-blue-500 outline-none text-white">
+                        <button onclick="ask()" class="absolute right-3 bg-blue-600 p-3 rounded-xl hover:bg-blue-500">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // Data Persistence
-        ['p_token', 'g_key', 's_id'].forEach(id => {
-            const v = sessionStorage.getItem(id);
-            if(v) document.getElementById(id).value = v;
-            document.getElementById(id).oninput = e => sessionStorage.setItem(id, e.target.value);
-        });
-
-        function toggleDate() {
-            const isCustom = document.getElementById('date_range').value === 'custom';
-            document.getElementById('custom_picker').classList.toggle('hidden', !isCustom);
+        function checkCustom() {
+            document.getElementById('custom_box').classList.toggle('hidden', document.getElementById('date_range').value !== 'custom');
         }
 
         function calculateDates() {
             const range = document.getElementById('date_range').value;
             let f = new Date(); let t = new Date();
-            
-            if(range === 'custom') {
+            if (range === 'custom') {
                 f = new Date(document.getElementById('start_date').value);
                 t = new Date(document.getElementById('end_date').value);
             } else if (range === 'ytd') {
                 f = new Date(new Date().getFullYear(), 0, 1);
+            } else if (range === 'qtd') {
+                const month = new Date().getMonth();
+                f = new Date(new Date().getFullYear(), Math.floor(month / 3) * 3, 1);
             } else {
                 f.setDate(f.getDate() - parseInt(range));
             }
-
-            // Pulsar-Strict ISO Format
-            const toISO = (d) => d.toISOString().split('.')[0] + "Z";
-            return { from: toISO(f), to: toISO(t) };
+            const iso = (d) => d.toISOString().split('.')[0] + "Z";
+            return { from: iso(f), to: iso(t) };
         }
 
         async function runIngest() {
-            const btn = document.getElementById('btn-main');
-            const con = document.getElementById('console');
-            const status = document.getElementById('status-panel');
-            const led = document.getElementById('status-led');
-            const txt = document.getElementById('status-text');
-            
-            status.classList.remove('hidden');
-            status.classList.add('ingesting');
-            btn.disabled = true;
-            btn.classList.add('opacity-30', 'grayscale');
-            led.className = "h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_10px_#3b82f6] animate-pulse";
-            txt.innerText = "Synchronizing";
-            
-            con.innerHTML = `<span class="text-gray-600">[${new Date().toLocaleTimeString()}]</span> INITIALIZING DATA HANDSHAKE...<br>`;
+            const log = (msg, color='text-emerald-500') => {
+                const con = document.getElementById('console');
+                con.innerHTML += `<div class="${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+                con.scrollTop = con.scrollHeight;
+            };
 
-            const dates = calculateDates();
+            const btn = document.getElementById('btn-main');
+            const status = document.getElementById('status-badge');
+            
+            btn.disabled = true;
+            status.innerText = "Processing";
+            status.classList.add('text-blue-400', 'border-blue-400', 'animate-pulse');
+            log("Initializing Secure Handshake...", "text-gray-500");
 
             try {
-                const response = await fetch('/api/ingest', {
+                const res = await fetch('/api/ingest', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         pulsar_token: document.getElementById('p_token').value,
                         search_id: document.getElementById('s_id').value,
-                        ...dates
+                        ...calculateDates()
                     })
                 });
-
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-
-                while (true) {
-                    const {done, value} = await reader.read();
-                    if (done) break;
-                    
-                    const chunk = decoder.decode(value);
-                    const lines = chunk.split('\n\n');
-                    
-                    lines.forEach(line => {
-                        if (line.startsWith('data: ')) {
-                            const d = JSON.parse(line.replace('data: ', ''));
-                            
-                            if (d.status === 'active' || d.status === 'log' || d.status === 'ingesting') {
-                                if (d.log) con.innerHTML += `<span class="text-gray-600">[${new Date().toLocaleTimeString()}]</span> ${d.log}<br>`;
-                                if (d.count) document.getElementById('post-count').innerText = d.count;
-                                if (d.progress) {
-                                    document.getElementById('prog-bar').style.width = d.progress + '%';
-                                    document.getElementById('prog-val').innerText = d.progress + '%';
-                                }
-                                con.scrollTop = con.scrollHeight;
-                            } else if (d.status === 'error') {
-                                con.innerHTML += `<span class="text-red-500 font-bold">> SYSTEM ERROR: ${d.log}</span><br>`;
-                                resetUI();
-                            } else if (d.status === 'complete') {
-                                con.innerHTML += `<span class="text-white font-bold">> INGESTION CYCLE COMPLETE. ${d.total} NODES STORED.</span><br>`;
-                                led.className = "h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]";
-                                txt.innerText = "Online / Ready";
-                                status.classList.remove('ingesting');
-                                revealChat();
-                            }
-                        }
-                    });
+                const data = await res.json();
+                
+                if(data.status === "success") {
+                    log(`SUCCESS: ${data.count} visibility-prioritized nodes indexed.`);
+                    document.getElementById('chat-ui').classList.remove('hidden');
+                    status.innerText = "Online";
+                    status.classList.remove('animate-pulse');
+                    status.classList.replace('text-blue-400', 'text-emerald-400');
+                } else {
+                    log(`ERROR: ${data.error || data.message}`, "text-red-500");
                 }
             } catch (e) {
-                con.innerHTML += `<span class="text-red-500">> CRITICAL BUFFER UNDERFLOW: ${e.message}</span>`;
-                resetUI();
+                log(`CRITICAL FAIL: ${e.message}`, "text-red-500");
+            } finally {
+                btn.disabled = false;
             }
         }
 
-        function revealChat() {
-            const chat = document.getElementById('chat-section');
-            chat.classList.remove('hidden');
-            setTimeout(() => chat.classList.add('opacity-100'), 100);
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }
-
-        async function askQuestion() {
+        async function ask() {
             const q = document.getElementById('query').value;
             const hist = document.getElementById('history');
             if(!q) return;
 
-            // User Message
-            const u = document.createElement('div');
-            u.className = "ml-auto max-w-xl glass p-8 rounded-[32px] rounded-tr-none mb-4 border-blue-900/20";
-            u.innerHTML = `<p class="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-3">Transmission</p><p class="text-xl text-white font-light leading-relaxed">${q}</p>`;
-            hist.appendChild(u);
+            hist.innerHTML += `<div class="bg-gray-900/50 p-4 rounded-xl border border-gray-800 ml-12 text-sm italic text-gray-300">Q: ${q}</div>`;
             document.getElementById('query').value = "";
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
             try {
                 const res = await fetch('/api/ask', {
@@ -237,23 +186,14 @@
                     })
                 });
                 const data = await res.json();
-
-                // Intelligence Message
-                const a = document.createElement('div');
-                a.className = "mr-auto max-w-3xl bg-white/5 border border-white/10 p-10 rounded-[40px] rounded-tl-none mb-4 shadow-2xl transition-all hover:border-blue-500/30";
-                a.innerHTML = `<p class="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Synthesis Core Result</p>
-                               <div class="text-gray-200 leading-loose font-light text-lg prose prose-invert">${data.answer.replace(/\n/g, '<br>')}</div>`;
-                hist.appendChild(a);
-                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                hist.innerHTML += `<div class="bg-blue-900/10 p-5 rounded-xl border border-blue-900/20 mr-12 text-sm leading-relaxed text-blue-50">
+                    <span class="text-[10px] font-bold text-blue-500 block mb-2 uppercase tracking-widest">Synthesis Output:</span>
+                    ${data.answer}
+                </div>`;
             } catch (e) {
-                alert("Synthesis Error: " + e.message);
+                hist.innerHTML += `<div class="text-red-500 text-xs">Synthesis failed. Check keys/connection.</div>`;
             }
-        }
-
-        function resetUI() {
-            document.getElementById('btn-main').disabled = false;
-            document.getElementById('btn-main').classList.remove('opacity-30', 'grayscale');
+            hist.scrollTop = hist.scrollHeight;
         }
     </script>
 </body>
