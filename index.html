@@ -2,98 +2,157 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Intelligence Terminal | Dark Mode</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INTEL.MCP | Strategy Terminal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;500&family=Space+Grotesk:wght@300;700&display=swap');
-        body { background: #050507; color: #a1a1aa; font-family: 'Space Grotesk', sans-serif; }
-        .terminal { font-family: 'JetBrains Mono', monospace; background: #000; border: 1px solid #1a1a1c; }
-        .input-dark { background: #0a0a0c; border: 1px solid #1a1a1c; color: white; transition: all 0.2s; }
-        .input-dark:focus { border-color: #3b82f6; outline: none; box-shadow: 0 0 15px rgba(59,130,246,0.1); }
+        
+        :root { --neon-blue: #3b82f6; --dark-bg: #050507; }
+        body { background: var(--dark-bg); color: #a1a1aa; font-family: 'Space Grotesk', sans-serif; overflow-x: hidden; }
+        
+        .glass { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); }
+        .terminal { font-family: 'JetBrains Mono', monospace; background: #000; border: 1px solid #1a1a1c; scrollbar-width: thin; }
+        .input-dark { background: #0a0a0c; border: 1px solid #1a1a1c; color: white; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .input-dark:focus { border-color: var(--neon-blue); outline: none; box-shadow: 0 0 20px rgba(59, 130, 246, 0.15); }
+        
+        .neon-text { color: var(--neon-blue); text-shadow: 0 0 12px rgba(59, 130, 246, 0.4); }
+        .glow-bar { box-shadow: 0 0 15px var(--neon-blue); }
+        
+        @keyframes pulse-border { 
+            0% { border-color: rgba(59, 130, 246, 0.2); } 
+            50% { border-color: rgba(59, 130, 246, 0.6); } 
+            100% { border-color: rgba(59, 130, 246, 0.2); } 
+        }
+        .ingesting { animation: pulse-border 2s infinite; }
     </style>
 </head>
 <body class="p-6 lg:p-12 min-h-screen">
+
     <div class="max-w-5xl mx-auto">
-        <header class="mb-10 flex justify-between items-end">
+        <header class="mb-12 flex justify-between items-end border-b border-gray-900 pb-8">
             <div>
-                <h1 class="text-3xl font-bold tracking-tighter text-white italic">INTEL<span class="text-blue-500">.MCP</span></h1>
-                <p class="text-[10px] uppercase tracking-[0.3em] text-gray-600 mt-1">Deep Narrative Ingestion</p>
+                <h1 class="text-4xl font-bold tracking-tighter text-white italic">INTEL<span class="neon-text">.MCP</span></h1>
+                <p class="text-[10px] uppercase tracking-[0.5em] text-gray-600 mt-2 font-bold">Autonomous Narrative Engine v4.2</p>
             </div>
-            <div id="connection-status" class="text-[9px] font-bold text-gray-700 uppercase tracking-widest border border-gray-900 px-3 py-1 rounded-full">System Idle</div>
+            <div id="sys-status" class="flex items-center gap-3">
+                <span class="h-2 w-2 rounded-full bg-gray-800" id="status-led"></span>
+                <span class="text-[9px] font-bold text-gray-500 uppercase tracking-widest" id="status-text">Standby</span>
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div id="config-panel" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div class="space-y-4">
-                <input id="p_token" type="password" placeholder="Pulsar Token" class="input-dark w-full p-4 rounded-xl text-xs">
-                <input id="g_key" type="password" placeholder="Groq API Key" class="input-dark w-full p-4 rounded-xl text-xs">
+                <label class="text-[10px] uppercase font-black text-gray-700 tracking-widest ml-1">Authentication</label>
+                <input id="p_token" type="password" placeholder="Pulsar Token" class="input-dark w-full p-4 rounded-2xl text-xs">
+                <input id="g_key" type="password" placeholder="Groq API Key" class="input-dark w-full p-4 rounded-2xl text-xs">
             </div>
+            
             <div class="space-y-4">
-                <input id="s_id" type="text" placeholder="Search ID" class="input-dark w-full p-4 rounded-xl text-xs">
-                <select id="date_range" onchange="toggleDate()" class="input-dark w-full p-4 rounded-xl text-xs">
+                <label class="text-[10px] uppercase font-black text-gray-700 tracking-widest ml-1">Dataset Target</label>
+                <input id="s_id" type="text" placeholder="Search ID (Numbers Only)" class="input-dark w-full p-4 rounded-2xl text-xs">
+                <select id="date_range" onchange="toggleDate()" class="input-dark w-full p-4 rounded-2xl text-xs cursor-pointer">
                     <option value="7" selected>Last 7 Days</option>
+                    <option value="14">Last 14 Days</option>
                     <option value="30">Last 30 Days</option>
-                    <option value="ytd">YTD</option>
-                    <option value="custom">Custom...</option>
+                    <option value="ytd">Year to Date (YTD)</option>
+                    <option value="custom">Custom Range...</option>
                 </select>
             </div>
-            <div id="btn-container" class="relative">
-                <button onclick="runIngest()" id="btn-main" class="w-full h-full bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-2xl transition-all flex flex-col items-center justify-center p-6">
-                    <span class="text-[10px] uppercase tracking-widest mb-1">Initialize Ingest</span>
-                    <span id="btn-subtext" class="text-[8px] opacity-60">Wait time: ~15 mins</span>
+
+            <div class="flex flex-col justify-end">
+                <button onclick="runIngest()" id="btn-main" class="w-full h-[116px] bg-blue-600 hover:bg-blue-500 text-white font-black rounded-3xl transition-all flex flex-col items-center justify-center shadow-xl group">
+                    <span class="text-[11px] uppercase tracking-[0.2em] mb-1">Initialize Ingest</span>
+                    <span class="text-[8px] opacity-60 font-medium">ESTIMATED WINDOW: 15 MINS</span>
                 </button>
             </div>
         </div>
 
-        <div id="custom_picker" class="hidden grid grid-cols-2 gap-4 mb-8 animate-slideDown">
-            <input type="date" id="start_date" class="input-dark p-4 rounded-xl text-xs">
-            <input type="date" id="end_date" class="input-dark p-4 rounded-xl text-xs">
+        <div id="custom_picker" class="hidden grid grid-cols-2 gap-4 mb-12 animate-in fade-in duration-500">
+            <div class="space-y-2">
+                <label class="text-[9px] text-gray-600 uppercase font-bold ml-1">Start Date</label>
+                <input type="date" id="start_date" class="input-dark w-full p-4 rounded-2xl text-xs">
+            </div>
+            <div class="space-y-2">
+                <label class="text-[9px] text-gray-600 uppercase font-bold ml-1">End Date</label>
+                <input type="date" id="end_date" class="input-dark w-full p-4 rounded-2xl text-xs">
+            </div>
         </div>
 
-        <div id="status-panel" class="hidden space-y-4 mb-12">
-            <div class="flex justify-between text-[10px] font-bold terminal-text">
-                <span class="text-blue-400">STATUS: <span id="current-op">LISTENING</span></span>
-                <span id="prog-val" class="text-white">0%</span>
+        <div id="status-panel" class="hidden space-y-6 mb-16">
+            <div class="flex justify-between items-center text-[10px] font-black terminal-text">
+                <div class="flex items-center gap-4">
+                    <span class="text-blue-500">CRAWLER STATUS: <span id="current-op" class="text-white">ACTIVE</span></span>
+                    <span class="text-gray-800">|</span>
+                    <span class="text-gray-500">PACKETS INDEXED: <span id="post-count" class="text-white">0</span></span>
+                </div>
+                <span id="prog-val" class="neon-text">0%</span>
             </div>
-            <div class="w-full bg-gray-900 h-1 rounded-full overflow-hidden">
-                <div id="prog-bar" class="bg-blue-600 h-full transition-all duration-500" style="width:0%"></div>
+            <div class="w-full bg-gray-900/50 h-1.5 rounded-full overflow-hidden">
+                <div id="prog-bar" class="bg-blue-600 h-full transition-all duration-700 glow-bar" style="width:0%"></div>
             </div>
-            <div id="console" class="terminal p-5 text-[10px] text-emerald-500 h-40 overflow-y-auto rounded-xl"></div>
+            <div id="console" class="terminal p-6 text-[11px] text-emerald-500/80 h-48 overflow-y-auto rounded-3xl leading-relaxed"></div>
         </div>
 
         <div id="chat-section" class="hidden opacity-0 transition-all duration-1000">
-             <div id="history" class="space-y-6 mb-12"></div>
-             <div class="relative">
-                 <input id="query" type="text" placeholder="Ask about sentiment, topics, or emotions..." class="w-full bg-transparent border-b border-gray-800 p-6 text-2xl font-light outline-none text-white focus:border-blue-500">
+             <div id="history" class="space-y-8 mb-16 min-h-[200px]"></div>
+             <div class="relative glass rounded-[40px] p-2 flex items-center border-gray-800 shadow-2xl">
+                 <input id="query" type="text" placeholder="Ask about specific emotions, topics, or trends..." class="flex-1 bg-transparent p-6 text-xl font-light outline-none text-white placeholder-gray-700">
+                 <button onclick="askQuestion()" class="bg-blue-600 p-6 rounded-[32px] hover:bg-blue-500 transition-all mr-2 shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                 </button>
              </div>
         </div>
     </div>
 
     <script>
+        // Data Persistence
+        ['p_token', 'g_key', 's_id'].forEach(id => {
+            const v = sessionStorage.getItem(id);
+            if(v) document.getElementById(id).value = v;
+            document.getElementById(id).oninput = e => sessionStorage.setItem(id, e.target.value);
+        });
+
         function toggleDate() {
             const isCustom = document.getElementById('date_range').value === 'custom';
             document.getElementById('custom_picker').classList.toggle('hidden', !isCustom);
         }
 
-        async function runIngest() {
-            const btn = document.getElementById('btn-main');
-            const consoleBox = document.getElementById('console');
-            const statusPanel = document.getElementById('status-panel');
-            const bar = document.getElementById('prog-bar');
-            const val = document.getElementById('prog-val');
-            
-            statusPanel.classList.remove('hidden');
-            btn.disabled = true;
-            btn.classList.add('opacity-50');
-            consoleBox.innerHTML = "> STARTING ENGINE...<br>";
-
-            // Date Calculation
+        function calculateDates() {
             const range = document.getElementById('date_range').value;
             let f = new Date(); let t = new Date();
+            
             if(range === 'custom') {
                 f = new Date(document.getElementById('start_date').value);
                 t = new Date(document.getElementById('end_date').value);
-            } else if (range === 'ytd') f = new Date(new Date().getFullYear(), 0, 1);
-            else f.setDate(f.getDate() - parseInt(range));
+            } else if (range === 'ytd') {
+                f = new Date(new Date().getFullYear(), 0, 1);
+            } else {
+                f.setDate(f.getDate() - parseInt(range));
+            }
+
+            // Pulsar-Strict ISO Format
+            const toISO = (d) => d.toISOString().split('.')[0] + "Z";
+            return { from: toISO(f), to: toISO(t) };
+        }
+
+        async function runIngest() {
+            const btn = document.getElementById('btn-main');
+            const con = document.getElementById('console');
+            const status = document.getElementById('status-panel');
+            const led = document.getElementById('status-led');
+            const txt = document.getElementById('status-text');
+            
+            status.classList.remove('hidden');
+            status.classList.add('ingesting');
+            btn.disabled = true;
+            btn.classList.add('opacity-30', 'grayscale');
+            led.className = "h-2 w-2 rounded-full bg-blue-500 shadow-[0_0_10px_#3b82f6] animate-pulse";
+            txt.innerText = "Synchronizing";
+            
+            con.innerHTML = `<span class="text-gray-600">[${new Date().toLocaleTimeString()}]</span> INITIALIZING DATA HANDSHAKE...<br>`;
+
+            const dates = calculateDates();
 
             try {
                 const response = await fetch('/api/ingest', {
@@ -102,8 +161,7 @@
                     body: JSON.stringify({
                         pulsar_token: document.getElementById('p_token').value,
                         search_id: document.getElementById('s_id').value,
-                        from: f.toISOString(),
-                        to: t.toISOString()
+                        ...dates
                     })
                 });
 
@@ -116,30 +174,86 @@
                     
                     const chunk = decoder.decode(value);
                     const lines = chunk.split('\n\n');
+                    
                     lines.forEach(line => {
                         if (line.startsWith('data: ')) {
                             const d = JSON.parse(line.replace('data: ', ''));
                             
                             if (d.status === 'active' || d.status === 'log' || d.status === 'ingesting') {
-                                if (d.log) consoleBox.innerHTML += `> ${d.log}<br>`;
+                                if (d.log) con.innerHTML += `<span class="text-gray-600">[${new Date().toLocaleTimeString()}]</span> ${d.log}<br>`;
+                                if (d.count) document.getElementById('post-count').innerText = d.count;
                                 if (d.progress) {
-                                    bar.style.width = d.progress + '%';
-                                    val.innerText = d.progress + '%';
+                                    document.getElementById('prog-bar').style.width = d.progress + '%';
+                                    document.getElementById('prog-val').innerText = d.progress + '%';
                                 }
-                                consoleBox.scrollTop = consoleBox.scrollHeight;
+                                con.scrollTop = con.scrollHeight;
                             } else if (d.status === 'error') {
-                                consoleBox.innerHTML += `<span class="text-red-500">> ERROR: ${d.log}</span><br>`;
+                                con.innerHTML += `<span class="text-red-500 font-bold">> SYSTEM ERROR: ${d.log}</span><br>`;
+                                resetUI();
                             } else if (d.status === 'complete') {
-                                consoleBox.innerHTML += `<span class="text-white">> SUCCESS: ${d.total} POSTS INDEXED.</span><br>`;
-                                document.getElementById('chat-section').classList.remove('hidden');
-                                setTimeout(() => document.getElementById('chat-section').classList.add('opacity-100'), 100);
+                                con.innerHTML += `<span class="text-white font-bold">> INGESTION CYCLE COMPLETE. ${d.total} NODES STORED.</span><br>`;
+                                led.className = "h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]";
+                                txt.innerText = "Online / Ready";
+                                status.classList.remove('ingesting');
+                                revealChat();
                             }
                         }
                     });
                 }
             } catch (e) {
-                consoleBox.innerHTML += `<span class="text-red-500">> CRITICAL FAILURE: ${e.message}</span>`;
+                con.innerHTML += `<span class="text-red-500">> CRITICAL BUFFER UNDERFLOW: ${e.message}</span>`;
+                resetUI();
             }
+        }
+
+        function revealChat() {
+            const chat = document.getElementById('chat-section');
+            chat.classList.remove('hidden');
+            setTimeout(() => chat.classList.add('opacity-100'), 100);
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        async function askQuestion() {
+            const q = document.getElementById('query').value;
+            const hist = document.getElementById('history');
+            if(!q) return;
+
+            // User Message
+            const u = document.createElement('div');
+            u.className = "ml-auto max-w-xl glass p-8 rounded-[32px] rounded-tr-none mb-4 border-blue-900/20";
+            u.innerHTML = `<p class="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-3">Transmission</p><p class="text-xl text-white font-light leading-relaxed">${q}</p>`;
+            hist.appendChild(u);
+            document.getElementById('query').value = "";
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+            try {
+                const res = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        search_id: document.getElementById('s_id').value,
+                        groq_key: document.getElementById('g_key').value,
+                        question: q
+                    })
+                });
+                const data = await res.json();
+
+                // Intelligence Message
+                const a = document.createElement('div');
+                a.className = "mr-auto max-w-3xl bg-white/5 border border-white/10 p-10 rounded-[40px] rounded-tl-none mb-4 shadow-2xl transition-all hover:border-blue-500/30";
+                a.innerHTML = `<p class="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Synthesis Core Result</p>
+                               <div class="text-gray-200 leading-loose font-light text-lg prose prose-invert">${data.answer.replace(/\n/g, '<br>')}</div>`;
+                hist.appendChild(a);
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            } catch (e) {
+                alert("Synthesis Error: " + e.message);
+            }
+        }
+
+        function resetUI() {
+            document.getElementById('btn-main').disabled = false;
+            document.getElementById('btn-main').classList.remove('opacity-30', 'grayscale');
         }
     </script>
 </body>
