@@ -16,22 +16,25 @@ def ingest():
     try:
         data = request.get_json(force=True)
         
-        # FIX 1: Nuke invisible characters from the UI inputs
+        # Clean inputs
         s_id = nuke_invisible_chars(data.get('search_id'))
         p_token = nuke_invisible_chars(data.get('pulsar_token'))
         
-        # FIX 2: The Absolute Simplest GraphQL Query
-        # No limits, no sorting, no nested results. Just the raw data.
+        # SCHEMA FIX 4: The 'ResultsReturn' Wrapper
+        # We query 'results', and inside that wrapper, we ask for the inner 'results' array.
+        # Zero pagination arguments to ensure it bypasses strict validation.
         query = """
         query GetPulsarData($f: FilterInput!) {
           results(filter: $f) {
-            content
-            source
-            visibility
-            engagements
-            sentiment
-            emotions
-            topics
+            results {
+              content
+              source
+              visibility
+              engagements
+              sentiment
+              emotions
+              topics
+            }
           }
         }
         """
@@ -61,8 +64,8 @@ def ingest():
         if "errors" in res_json:
             return jsonify({"error": res_json['errors'][0].get('message')}), 400
 
-        # Based on your exact schema, 'results' contains the array directly
-        batch = res_json.get('data', {}).get('results', [])
+        # Extract from the inner array
+        batch = res_json.get('data', {}).get('results', {}).get('results', [])
         
         if not batch:
             return jsonify({"status": "empty", "message": "Zero results. Check ID/Dates."})
@@ -88,13 +91,16 @@ def ask():
         if not dataset:
             return jsonify({"answer": "Error: Knowledge base empty."}), 400
 
-        context = [{"text": p.get('content', '')[:140], "r": p.get('visibility'), "s": p.get('sentiment'), "e": p.get('emotions'), "tp": p.get('topics')} for p in dataset[:150]]
+        # Sort the dataset by visibility in Python instead of GraphQL to ensure we prioritize reach
+        sorted_dataset = sorted(dataset, key=lambda x: x.get('visibility', 0), reverse=True)
+
+        context = [{"text": p.get('content', '')[:140], "r": p.get('visibility'), "s": p.get('sentiment'), "e": p.get('emotions'), "tp": p.get('topics')} for p in sorted_dataset[:150]]
             
         client = Groq(api_key=g_key)
         chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are Gemini Intelligence. Group insights by Emotion and Topic."},
+                {"role": "system", "content": "You are Gemini Intelligence. Group insights by Emotion and Topic using Markdown."},
                 {"role": "user", "content": f"Data: {json.dumps(context)}\n\nQuery: {query}"}
             ]
         )
