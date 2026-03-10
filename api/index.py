@@ -18,14 +18,15 @@ def analyze():
         raw_data = request.get_json(force=True)
         data = deep_clean(raw_data)
         
-        # Extract brands from the prompt (e.g., "Smirnoff, Absolut")
-        brands = [b.strip() for b in data.get('prompt', '').split(',') if len(b) > 2]
-        if not brands: brands = ["Brand A", "Brand B"] # Fallback
+        p_token = data.get('pulsar_token')
+        g_key = data.get('groq_key')
+        s_id = str(data.get('search_id'))
+        
+        p_start = f"{data.get('date_from')}T00:00:00Z"
+        p_end = f"{data.get('date_to')}T23:59:59Z"
 
-        p_token, g_key, s_id = data.get('pulsar_token'), data.get('groq_key'), str(data.get('search_id'))
-        p_start, p_end = f"{data.get('date_from')}T00:00:00Z", f"{data.get('date_to')}T23:59:59Z"
-
-        query = "query G($f:FilterInput!){results(filter:$f){results{content visibility engagement source}}}"
+        # 1. Fetch from Pulsar
+        query = "query G($f:FilterInput!){results(filter:$f){results{content visibility engagement source publishedAt}}}"
         variables = {"f": {"searchIds": [s_id], "dateFrom": p_start, "dateTo": p_end}}
         
         p_res = requests.post("https://data.pulsarplatform.com/graphql/trac", 
@@ -35,37 +36,30 @@ def analyze():
         posts = deep_clean(p_res.json()).get('data', {}).get('results', {}).get('results', [])
         if not posts: return jsonify({"error": "No data found."}), 404
 
-        # 1. Map Brands & Channels
-        brand_map = {}
-        for p in posts:
-            content = p.get('content', '').lower()
-            source = p.get('source', 'Web')
-            matched = "Other"
-            for b in brands:
-                if b.lower() in content: matched = b; break
-            
-            if matched not in brand_map: brand_map[matched] = {"count": 0, "sources": {}}
-            brand_map[matched]["count"] += 1
-            brand_map[matched]["sources"][source] = brand_map[matched]["sources"].get(source, 0) + 1
-
-        # 2. Weighted Impact Sorting
+        # 2. Weighted Impact Sorting (Top 500)
         for p in posts: p['w'] = (p.get('visibility', 0) * 0.6) + (p.get('engagement', 0) * 0.4)
         top = sorted(posts, key=lambda x: x['w'], reverse=True)[:500]
-        context = [{"t": p.get('content')[:160], "s": p.get('source')} for p in top]
+        context = [{"text": p.get('content')[:160], "reach": p.get('visibility'), "eng": p.get('engagement'), "src": p.get('source'), "date": p.get('publishedAt')} for p in top]
 
-        # 3. AI Strategic Summary
+        # 3. Generative UI Prompt
         client = Groq(api_key=g_key)
         chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             response_format={"type": "json_object"},
             messages=[
-                {"role": "system", "content": "Return JSON: {executive_summary: string, themes: [{title, summary, impact, offensive, defensive}]}"},
-                {"role": "user", "content": f"Analyze: {json.dumps(context)}"}
+                {"role": "system", "content": """You are a Strategic Data Scientist. 
+                Analyze the data and create a custom dashboard report.
+                You MUST return a JSON with a 'widgets' array. 
+                Each widget must be one of:
+                1. { "type": "text", "title": "string", "body": "string" }
+                2. { "type": "chart", "title": "string", "plotly_config": [Plotly.js data array] }
+                3. { "type": "metric", "label": "string", "value": "string" }
+                
+                Be aggressive and insightful. If the user asks for brand comparisons, build charts that reflect that."""},
+                {"role": "user", "content": f"User Goal: {data.get('prompt')}\n\nData: {json.dumps(context)}"}
             ]
         )
 
-        res = json.loads(chat.choices[0].message.content)
-        res['brand_sov'] = brand_map # CRITICAL: Ensure this key exists
-        return app.response_class(response=json.dumps(deep_clean(res)), status=200, mimetype='application/json')
+        return app.response_class(response=chat.choices[0].message.content, status=200, mimetype='application/json')
     except Exception as e:
         return jsonify({"error": str(e)}), 500
