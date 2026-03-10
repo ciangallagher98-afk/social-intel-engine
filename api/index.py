@@ -32,8 +32,8 @@ def ingest():
               visibility
               engagement
               sentiment
-              emotions
-              topics
+              emotion
+              topic
             }
           }
         }
