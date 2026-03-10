@@ -30,7 +30,7 @@ def ingest():
               content
               source
               visibility
-              engagements
+              engagement
               sentiment
               emotions
               topics
