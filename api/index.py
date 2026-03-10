@@ -17,15 +17,18 @@ def ingest():
         s_id = nuke_invisible_chars(data.get('search_id'))
         p_token = nuke_invisible_chars(data.get('pulsar_token'))
         
+        d_from = data.get('from')
+        current_date_to = data.get('to')
+        
         all_posts = []
-        offset = 0
-        limit = 50 
-        max_pages = 20 # 50 posts * 20 pages = 1,000 deep
-
-        while offset < (limit * max_pages):
+        seen_content = set()
+        pages_fetched = 0
+        max_pages = 20 # Collects up to 1,000 posts (50 posts * 20 pages)
+        
+        while pages_fetched < max_pages:
             
-            # THE PURE QUERY: Notice there is NO limit or offset here.
-            # Using singular 'engagement' and 'emotion' based on your last working snippet.
+            # THE PURE QUERY: Completely naked. No limits. No offsets.
+            # Added 'publishedAt' so we can track our movement through time.
             query = """
             query GetPulsarData($f: FilterInput!) {
               results(filter: $f) {
@@ -36,20 +39,19 @@ def ingest():
                   engagement
                   sentiment
                   emotion
-                 
+                  
+                  publishedAt
                 }
               }
             }
             """
             
-            # Paginating strictly through the FilterInput variables
+            # The Sliding Window: 'dateTo' changes dynamically every loop
             variables = {
                 "f": {
                     "searchIds": [s_id],
-                    "dateFrom": data.get('from'),
-                    "dateTo": data.get('to'),
-                    "limit": limit,
-                    "offset": offset
+                    "dateFrom": d_from,
+                    "dateTo": current_date_to
                 }
             }
             
@@ -73,17 +75,33 @@ def ingest():
             batch = res_json.get('data', {}).get('results', {}).get('results', [])
             
             if not batch:
-                break # We hit the end of the data
+                break # We reached the end of the data
+
+            added_this_round = 0
+            last_timestamp = None
 
             for post in batch:
-                post['content'] = post.get('content', '').replace('\u2028', ' ').replace('\u2029', ' ')
-            
-            all_posts.extend(batch)
-            
-            if len(batch) < limit:
-                break # Last page reached
+                content = post.get('content', '')
+                last_timestamp = post.get('publishedAt')
                 
-            offset += limit
+                # Deduplicate overlapping posts on the exact same second boundary
+                if content not in seen_content:
+                    seen_content.add(content)
+                    post['content'] = content.replace('\u2028', ' ').replace('\u2029', ' ')
+                    all_posts.append(post)
+                    added_this_round += 1
+            
+            # Pulsar's max batch size is 50. If we get less, we've hit the end.
+            if len(batch) < 50:
+                break
+                
+            # If the timestamp fails or we loop on duplicates, force break
+            if added_this_round == 0 or not last_timestamp:
+                break
+                
+            # Set the ceiling for the next fetch to the oldest post in this batch
+            current_date_to = last_timestamp
+            pages_fetched += 1
 
         if not all_posts:
             return jsonify({"status": "empty", "message": "Zero results. Check ID/Dates."})
@@ -106,11 +124,11 @@ def ask():
         if not dataset:
             return jsonify({"answer": "Error: Knowledge base empty."}), 400
 
-        # Sort all the collected posts by visibility
+        # Sort the accumulated 1,000+ posts by visibility
         sorted_dataset = sorted(dataset, key=lambda x: x.get('visibility', 0), reverse=True)
 
-        # Context compression mapping to 'emotion' singular
-        context = [{"text": p.get('content', '')[:140], "r": p.get('visibility'), "s": p.get('sentiment'), "e": p.get('emotion')} for p in sorted_dataset[:250]]
+        # Slice the top 250 highest-reach posts for the LLM
+        context = [{"text": p.get('content', '')[:140], "r": p.get('visibility'), "s": p.get('sentiment'), "e": p.get('emotion'), "tp": p.get('topics')} for p in sorted_dataset[:250]]
             
         client = Groq(api_key=g_key)
         chat = client.chat.completions.create(
