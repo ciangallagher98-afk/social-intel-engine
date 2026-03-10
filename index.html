@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pulsar Pro | Strategy</title>
+    <title>Pulsar Pro | Strategic Intelligence</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&display=swap');
@@ -11,37 +11,38 @@
         .ikea-blue { background-color: #0058a3; }
         .ikea-text { color: #0058a3; }
         .border-soft { border-color: #f1f1f1; }
-        .transition-ease { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .animate-fadeIn { animation: fadeIn 0.8s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
-<body class="p-6 md:p-20">
+<body class="p-6 md:p-16 lg:p-24">
     <div class="max-w-6xl mx-auto">
-        <header class="flex justify-between items-baseline mb-20 border-b border-soft pb-10">
+        <header class="flex justify-between items-center mb-16 border-b border-soft pb-10">
             <h1 class="text-3xl font-black tracking-tighter ikea-text uppercase italic">Pulsar <span class="text-gray-200 font-normal not-italic lowercase">Pro</span></h1>
             <div class="flex items-center gap-3">
-                <span class="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-                <span class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.3em]">Strategy Engine Active</span>
+                <span id="status-dot" class="h-2 w-2 rounded-full bg-gray-300 transition-colors duration-500"></span>
+                <span id="status-text" class="text-[9px] font-bold text-gray-400 uppercase tracking-[0.3em]">Engine Standby</span>
             </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-20">
             <aside class="lg:col-span-1 space-y-12">
                 <section class="space-y-4">
-                    <label class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Setup</label>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Authentication</label>
                     <input id="p_token" type="password" placeholder="Pulsar Token" class="w-full p-4 border border-soft rounded-xl text-sm outline-none focus:border-blue-500 transition-all">
                     <input id="g_key" type="password" placeholder="Groq Key" class="w-full p-4 border border-soft rounded-xl text-sm outline-none focus:border-blue-500 transition-all">
                     <input id="s_id" type="text" placeholder="Search UID" class="w-full p-4 border border-soft rounded-xl text-sm outline-none focus:border-blue-500 transition-all">
                 </section>
 
                 <section class="space-y-4">
-                    <label class="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Report Period</label>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Reporting Period</label>
                     <select id="date_preset" onchange="toggleDate()" class="w-full p-4 bg-gray-50 border border-soft rounded-xl text-sm outline-none appearance-none cursor-pointer">
                         <option value="1">Yesterday</option>
                         <option value="7" selected>Last 7 Days</option>
                         <option value="30">Last 30 Days</option>
                         <option value="qtd">Quarter to Date</option>
                         <option value="ytd">Year to Date</option>
-                        <option value="custom">Custom Range...</option>
+                        <option value="custom">Custom...</option>
                     </select>
                     <div id="custom_ui" class="hidden grid grid-cols-2 gap-2 pt-2">
                         <input id="date_from" type="date" class="p-2 border border-soft rounded text-[10px]">
@@ -49,32 +50,39 @@
                     </div>
                 </section>
 
-                <button onclick="run()" id="btn" class="w-full py-5 ikea-blue text-white font-bold text-[10px] tracking-widest rounded-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 transition-ease uppercase">Generate Strategy</button>
+                <button onclick="run()" id="btn" class="w-full py-5 ikea-blue text-white font-bold text-[10px] tracking-widest rounded-xl hover:shadow-2xl hover:-translate-y-1 active:translate-y-0 transition-all uppercase">Generate Strategy</button>
             </aside>
 
             <main class="lg:col-span-3">
                 <div class="mb-16">
-                    <textarea id="prompt" rows="2" class="w-full text-4xl font-light border-none focus:ring-0 outline-none placeholder-gray-100 leading-tight" placeholder="What is our focus?"></textarea>
+                    <textarea id="prompt" rows="2" class="w-full text-4xl font-light border-none focus:ring-0 outline-none placeholder-gray-100 leading-tight" placeholder="What should we analyze?"></textarea>
                 </div>
 
                 <div id="sov_container" class="hidden mb-16 animate-fadeIn">
-                    <h4 class="text-[9px] font-bold text-gray-300 uppercase mb-4 tracking-widest">Share of Voice by Channel</h4>
+                    <h4 class="text-[9px] font-bold text-gray-300 uppercase mb-4 tracking-widest">Share of Voice by Source</h4>
                     <div id="sov_bar" class="flex w-full h-10 rounded-xl overflow-hidden bg-gray-50 border border-gray-100 shadow-sm"></div>
                 </div>
 
-                <div id="output" class="hidden space-y-24">
-                    <div class="max-w-2xl">
-                        <h4 class="text-[9px] font-bold text-gray-300 uppercase mb-6 tracking-widest">Strategic Outlook</h4>
-                        <p id="sum-text" class="text-2xl text-gray-800 font-light leading-snug italic"></p>
+                <div id="loader" class="hidden mb-16 animate-fadeIn">
+                    <div class="flex justify-between items-end mb-4 font-bold text-[9px] ikea-text uppercase tracking-widest">
+                        <span>Crunching Data Signals</span><span id="prog_val">0%</span>
                     </div>
-                    <div id="grid" class="grid grid-cols-1 gap-20"></div>
+                    <div class="w-full bg-gray-50 h-[2px]"><div id="prog_bar" class="ikea-blue h-[2px] transition-all duration-1000" style="width:0%"></div></div>
+                </div>
+
+                <div id="output" class="hidden space-y-24 animate-fadeIn">
+                    <div class="max-w-2xl">
+                        <h4 class="text-[10px] font-bold text-gray-300 uppercase mb-6 tracking-widest">Strategic Outlook</h4>
+                        <p id="sum-text" class="text-2xl text-gray-800 font-light leading-snug"></p>
+                    </div>
+                    <div id="grid" class="grid grid-cols-1 gap-16"></div>
                 </div>
             </main>
         </div>
     </div>
 
     <script>
-        // Store user keys for session
+        // Persistence: Load keys from session
         ['p_token', 'g_key', 's_id'].forEach(id => {
             const val = sessionStorage.getItem(id);
             if(val) document.getElementById(id).value = val;
@@ -83,11 +91,22 @@
 
         function toggleDate() { document.getElementById('custom_ui').classList.toggle('hidden', document.getElementById('date_preset').value !== 'custom'); }
 
+        function scrub(str) { return str ? str.replace(/[\u2028\u2029]/g, ' ').trim() : ""; }
+
         async function run() {
             const btn = document.getElementById('btn');
-            btn.disabled = true;
+            const output = document.getElementById('output');
+            const loader = document.getElementById('loader');
+            const grid = document.getElementById('grid');
+            const statusDot = document.getElementById('status-dot');
 
-            // Date Calculation Logic
+            btn.disabled = true;
+            loader.classList.remove('hidden');
+            output.classList.add('hidden');
+            grid.innerHTML = "";
+            statusDot.classList.replace('bg-gray-300', 'bg-blue-500');
+
+            // Date Selection
             const preset = document.getElementById('date_preset').value;
             let f = new Date(); let t = new Date();
             if(preset === '1') { f.setDate(f.getDate()-1); t.setDate(t.getDate()-1); }
@@ -96,68 +115,87 @@
             else if(preset !== 'custom') { f.setDate(f.getDate() - parseInt(preset)); }
             else { f = new Date(document.getElementById('date_from').value); t = new Date(document.getElementById('date_to').value); }
 
+            document.getElementById('prog_bar').style.width = "40%";
+            document.getElementById('prog_val').innerText = "40%";
+
             try {
                 const res = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
-                        pulsar_token: document.getElementById('p_token').value,
-                        groq_key: document.getElementById('g_key').value,
-                        search_id: document.getElementById('s_id').value,
+                        pulsar_token: scrub(document.getElementById('p_token').value),
+                        groq_key: scrub(document.getElementById('g_key').value),
+                        search_id: scrub(document.getElementById('s_id').value),
                         date_from: f.toISOString().split('T')[0],
                         date_to: t.toISOString().split('T')[0],
-                        prompt: document.getElementById('prompt').value || "Analyze themes and strategy"
+                        prompt: scrub(document.getElementById('prompt').value) || "Strategic analysis"
                     })
                 });
 
                 const data = await res.json();
                 if(data.error) throw new Error(data.error);
 
-                // Render SOV Bar
+                // 1. Render SOV Bar
                 const sovBar = document.getElementById('sov_bar');
                 sovBar.innerHTML = "";
                 const colors = ['#0058a3', '#007cc3', '#409ad0', '#80bce0', '#b3d1eb'];
-                Object.entries(data.sov).forEach(([name, val], i) => {
+                Object.entries(data.sov || {}).forEach(([name, val], i) => {
                     const seg = document.createElement('div');
                     seg.style.width = val + '%';
                     seg.style.backgroundColor = colors[i % colors.length];
-                    seg.className = "flex items-center justify-center text-[8px] font-bold text-white uppercase whitespace-nowrap px-2";
+                    seg.className = "flex items-center justify-center text-[8px] font-bold text-white uppercase px-2 overflow-hidden whitespace-nowrap";
                     seg.innerHTML = `<span>${name} ${val}%</span>`;
                     sovBar.appendChild(seg);
                 });
                 document.getElementById('sov_container').classList.remove('hidden');
 
-                // Render Summary & Themes
-                document.getElementById('sum-text').innerText = data.executive_summary;
-                const grid = document.getElementById('grid');
-                grid.innerHTML = "";
-                data.themes.forEach(theme => {
+                // 2. Render Themes with Safe-Key logic
+                document.getElementById('sum-text').innerText = data.executive_summary || "Summary generated.";
+                
+                (data.themes || []).forEach(theme => {
                     const card = document.createElement('div');
-                    card.className = "border-l-4 border-gray-100 pl-10 py-2 hover:border-blue-600 transition-ease group";
+                    card.className = "border-l-4 border-gray-100 pl-10 py-2 hover:border-blue-600 transition-all duration-500 group";
+                    
+                    // Fallbacks to prevent "undefined"
+                    const title = theme.title || "Observation";
+                    const summary = theme.summary || "Description unavailable.";
+                    const impact = theme.impact || theme.impact_score || theme.impact_level || "50";
+                    const offensive = theme.offensive || theme.offensive_play || "Awaiting opportunity analysis.";
+                    const defensive = theme.defensive || theme.defensive_play || "Monitoring ongoing trends.";
+
                     card.innerHTML = `
                         <div class="flex justify-between items-baseline mb-6">
-                            <h5 class="text-2xl font-bold tracking-tight">${theme.title}</h5>
-                            <span class="text-[10px] font-black ikea-text bg-blue-50 px-3 py-1 uppercase tracking-widest italic">Priority ${theme.impact_score}%</span>
+                            <h5 class="text-2xl font-bold tracking-tight">${title}</h5>
+                            <span class="text-[10px] font-black ikea-text bg-blue-50 px-3 py-1 uppercase tracking-widest italic">Priority ${impact}%</span>
                         </div>
-                        <p class="text-gray-500 font-light text-lg mb-10 max-w-3xl leading-relaxed">${theme.summary}</p>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 bg-gray-50/50 p-8 rounded-2xl border border-gray-50 group-hover:bg-blue-50/20 transition-ease">
-                            <div class="space-y-3">
-                                <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest block">Offensive Strategy</span>
-                                <p class="text-xs text-gray-700 italic border-l-2 border-emerald-200 pl-4 leading-relaxed">${theme.offensive_play}</p>
+                        <p class="text-gray-500 font-light text-lg mb-10 max-w-3xl leading-relaxed">${summary}</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 bg-gray-50/50 p-8 rounded-2xl border border-gray-50 group-hover:bg-blue-50/20 transition-all duration-500">
+                            <div>
+                                <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest block mb-3">Offensive Play</span>
+                                <p class="text-xs text-gray-700 italic border-l-2 border-emerald-200 pl-4 leading-relaxed">${offensive}</p>
                             </div>
-                            <div class="space-y-3">
-                                <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest block">Defensive Strategy</span>
-                                <p class="text-xs text-gray-700 italic border-l-2 border-rose-200 pl-4 leading-relaxed">${theme.defensive_play}</p>
+                            <div>
+                                <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest block mb-3">Defensive Play</span>
+                                <p class="text-xs text-gray-700 italic border-l-2 border-rose-200 pl-4 leading-relaxed">${defensive}</p>
                             </div>
                         </div>
                     `;
                     grid.appendChild(card);
                 });
 
-                document.getElementById('output').classList.remove('hidden');
-                window.scrollTo({ top: 400, behavior: 'smooth' });
-            } catch (e) { alert(e.message); }
-            finally { btn.disabled = false; }
+                document.getElementById('prog_bar').style.width = "100%";
+                setTimeout(() => {
+                    loader.classList.add('hidden');
+                    output.classList.remove('hidden');
+                    statusDot.classList.replace('bg-blue-500', 'bg-emerald-500');
+                }, 500);
+
+            } catch (e) {
+                alert("Analysis Error: " + e.message);
+                statusDot.classList.replace('bg-blue-500', 'bg-rose-500');
+            } finally {
+                btn.disabled = false;
+            }
         }
     </script>
 </body>
