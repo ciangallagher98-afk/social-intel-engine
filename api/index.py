@@ -2,15 +2,20 @@ from flask import Flask, request, jsonify, Response
 import requests
 import json
 import time
+import sys
 from groq import Groq
+
+# Force the entire Python environment to prefer UTF-8
+import io
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 app = Flask(__name__)
 knowledge_base = {}
 
-def safe_encode(text):
-    """Deep cleans strings to prevent encoding crashes."""
+def clean_string(text):
+    """Strips out problematic encoding characters before they hit the JSON serializer."""
     if not text: return ""
-    # Remove problematic characters like \u2028 (Line Separator) and \u2029
+    # Specifically targeting the \u2028 and \u2029 separators that caused your crash
     return text.replace('\u2028', ' ').replace('\u2029', ' ').encode('utf-8', 'ignore').decode('utf-8')
 
 @app.route('/api/ingest', methods=['POST'])
@@ -24,7 +29,7 @@ def ingest():
         def generate():
             total = 0
             knowledge_base[s_id] = []
-            yield f"data: {json.dumps({'status': 'active', 'log': 'Connection Established...'})}\n\n"
+            yield f"data: {json.dumps({'status': 'active', 'log': 'Connection Secured. Forcing UTF-8...'})}\n\n"
 
             for page in range(20):
                 offset = page * 50
@@ -42,13 +47,15 @@ def ingest():
                   }
                 }
                 """
-                variables = {"f": {"searchIds": [s_id], "dateFrom": d_from, "dateTo": d_to}}
+                vars = {"f": {"searchIds": [s_id], "dateFrom": d_from, "dateTo": d_to}}
                 
                 try:
-                    # FIX: Explicitly set encoding to utf-8 in the request
+                    # We use 'data' instead of 'json' to have manual control over encoding
+                    payload = json.dumps({"query": query, "variables": vars}).encode('utf-8')
+                    
                     r = requests.post(
                         "https://data.pulsarplatform.com/graphql/trac", 
-                        json={"query": query, "variables": variables}, 
+                        data=payload, 
                         headers={
                             "Authorization": f"Bearer {p_token}",
                             "Content-Type": "application/json; charset=utf-8"
@@ -57,32 +64,29 @@ def ingest():
                     )
                     
                     if r.status_code != 200:
-                        yield f"data: {json.dumps({'status': 'error', 'log': f'API Error: {r.status_code}'})}\n\n"
+                        yield f"data: {json.dumps({'status': 'error', 'log': f'HTTP {r.status_code}: API Rejected Request'})}\n\n"
                         break
 
-                    # FIX: Ensure we read the response as UTF-8
+                    # Interpret the response explicitly as UTF-8
                     r.encoding = 'utf-8'
                     res_json = r.json()
                     
                     batch = res_json.get('data', {}).get('results', {}).get('results', [])
                     if not batch: break
                     
-                    # Clean the content of each post before storing
-                    cleaned_batch = []
+                    # Clean the content field for every post
                     for post in batch:
-                        post['content'] = safe_encode(post.get('content', ''))
-                        cleaned_batch.append(post)
-
-                    total += len(cleaned_batch)
-                    knowledge_base[s_id].extend(cleaned_batch)
+                        post['content'] = clean_string(post.get('content', ''))
+                    
+                    total += len(batch)
+                    knowledge_base[s_id].extend(batch)
                     
                     progress = int(((page + 1) / 20) * 100)
-                    yield f"data: {json.dumps({'status': 'ingesting', 'count': total, 'progress': progress, 'log': f'Indexed {total} posts...'})}\n\n"
+                    yield f"data: {json.dumps({'status': 'ingesting', 'count': total, 'progress': progress, 'log': f'Successfully Indexed {total} posts...'})}\n\n"
                     time.sleep(0.4)
                     
                 except Exception as inner_e:
-                    # Log the specific error to the UI console
-                    yield f"data: {json.dumps({'status': 'error', 'log': f'Parsing Error: {str(inner_e)}'})}\n\n"
+                    yield f"data: {json.dumps({'status': 'error', 'log': f'Encoding/Parsing Failure: {str(inner_e)}'})}\n\n"
                     break
                     
             yield f"data: {json.dumps({'status': 'complete', 'total': total})}\n\n"
@@ -98,25 +102,25 @@ def ask():
         s_id, query, g_key = str(data.get('search_id')), data.get('question'), data.get('groq_key')
         
         dataset = knowledge_base.get(s_id, [])
-        if not dataset: return jsonify({"error": "Knowledge base empty."}), 400
+        if not dataset: return jsonify({"error": "No data found. Please ingest first."}), 400
 
-        # Create the AI context
+        # Create a compressed context for Groq
         context = []
         for p in dataset[:500]:
-            analysis = p.get('analysis', {}) or {}
+            an = p.get('analysis', {}) or {}
             context.append({
-                "t": p.get('content', '')[:160],
-                "sent": analysis.get('sentiment', {}).get('label') if analysis.get('sentiment') else "N/A",
-                "emo": [e.get('label') for e in analysis.get('emotions', [])[:1]],
-                "topics": [t.get('label') for t in analysis.get('topics', [])[:2]]
+                "t": p.get('content', '')[:140],
+                "s": an.get('sentiment', {}).get('label', 'neu'),
+                "e": [e.get('label') for e in an.get('emotions', [])[:1]],
+                "tp": [t.get('label') for t in an.get('topics', [])[:2]]
             })
             
         client = Groq(api_key=g_key)
         chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are Gemini Intelligence. Analyze the provided dataset for trends in emotions and topics. Use Markdown."},
-                {"role": "user", "content": f"Context: {json.dumps(context)}\n\nQuestion: {query}"}
+                {"role": "system", "content": "You are Gemini Intel. Provide strategic insights based on the Emotion and Topic data provided. Use bullet points."},
+                {"role": "user", "content": f"Data: {json.dumps(context)}\n\nQuery: {query}"}
             ]
         )
         return jsonify({"answer": chat.choices[0].message.content})
