@@ -1,39 +1,139 @@
-<script>
-async function ask() {
-    const q = document.getElementById('query').value;
-    const history = document.getElementById('history');
-    
-    // User bubble
-    const userMsg = document.createElement('div');
-    userMsg.className = "ml-auto max-w-[80%] bg-blue-600 p-4 rounded-2xl rounded-tr-none mb-6";
-    userMsg.innerHTML = `<p class="text-sm text-white">${q}</p>`;
-    history.appendChild(userMsg);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grok MCP | Data Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { background: #050505; color: #e5e5e5; font-family: 'Inter', sans-serif; }
+        .terminal { background: #000; border: 1px solid #1a1a1a; font-family: 'Courier New', monospace; }
+        .glass-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+    <div class="max-w-5xl mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+            <input id="p_token" type="password" placeholder="Pulsar Token" class="bg-black border border-gray-800 p-4 rounded-xl text-xs outline-none focus:border-blue-600">
+            <input id="g_key" type="password" placeholder="Groq API Key" class="bg-black border border-gray-800 p-4 rounded-xl text-xs outline-none focus:border-blue-600">
+            <input id="s_id" type="text" placeholder="Search ID" class="bg-black border border-gray-800 p-4 rounded-xl text-xs outline-none focus:border-blue-600">
+        </div>
 
-    const res = await fetch('/api/ask', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            search_id: document.getElementById('s_id').value,
-            groq_key: document.getElementById('g_key').value,
-            question: q
-        })
-    });
-    const data = await res.json();
-    
-    // AI response with "Insight Card" styling
-    const aiMsg = document.createElement('div');
-    aiMsg.className = "mr-auto max-w-[90%] bg-[#111] border border-gray-800 p-6 rounded-2xl rounded-tl-none mb-6 shadow-2xl";
-    aiMsg.innerHTML = `
-        <div class="flex items-center gap-2 mb-4">
-            <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span class="text-[9px] font-black text-emerald-500 uppercase tracking-widest">Intelligence Synthesis</span>
+        <div id="ingest-box" class="mb-12">
+            <button onclick="runIngest()" id="btn-main" class="w-full py-6 bg-blue-600 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 transition-all">Initialize 15-Minute Data Ingestion</button>
+            <div id="status-bar" class="hidden mt-8 space-y-4">
+                <div class="flex justify-between text-[10px] font-bold text-blue-400">
+                    <span id="status-msg">Indexing Pulsar Corpus...</span>
+                    <span id="prog-val">0%</span>
+                </div>
+                <div class="w-full bg-gray-900 h-1 rounded-full overflow-hidden">
+                    <div id="prog-bar" class="bg-blue-500 h-full transition-all duration-500" style="width:0%"></div>
+                </div>
+                <div id="console" class="terminal p-4 text-[10px] text-emerald-500 h-32 overflow-y-auto"></div>
+            </div>
         </div>
-        <div class="text-gray-300 font-light leading-relaxed prose prose-invert">
-            ${data.answer.replace(/\n/g, '<br>')}
+
+        <div id="chat-box" class="hidden opacity-0 space-y-8">
+            <div id="history" class="space-y-6"></div>
+            <div class="relative mt-12">
+                <input id="query" type="text" placeholder="Type command (e.g. 'Compare the emotions of Smirnoff vs Absolut')..." class="w-full bg-transparent border-b border-gray-800 p-6 text-2xl font-light outline-none focus:border-blue-500">
+                <button onclick="askQuestion()" class="absolute right-0 top-6 text-blue-500 font-bold uppercase text-[10px] tracking-widest">Execute</button>
+            </div>
         </div>
-    `;
-    history.appendChild(aiMsg);
-    history.scrollTop = history.scrollHeight;
-    document.getElementById('query').value = "";
-}
-</script>
+    </div>
+
+    <script>
+        // Persistence
+        ['p_token', 'g_key', 's_id'].forEach(id => {
+            const v = sessionStorage.getItem(id);
+            if(v) document.getElementById(id).value = v;
+            document.getElementById(id).oninput = e => sessionStorage.setItem(id, e.target.value);
+        });
+
+        async function runIngest() {
+            const btn = document.getElementById('btn-main');
+            const consoleBox = document.getElementById('console');
+            const bar = document.getElementById('prog-bar');
+            const val = document.getElementById('prog-val');
+            
+            document.getElementById('status-bar').classList.remove('hidden');
+            btn.innerText = "Ingestion Running...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/ingest', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        pulsar_token: document.getElementById('p_token').value,
+                        search_id: document.getElementById('s_id').value
+                    })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n\n');
+                    lines.forEach(line => {
+                        if (line.startsWith('data: ')) {
+                            const d = JSON.parse(line.replace('data: ', ''));
+                            if (d.status === 'ingesting') {
+                                consoleBox.innerHTML += `> Batch Received: ${d.count} posts indexed...<br>`;
+                                bar.style.width = d.progress + '%';
+                                val.innerText = d.progress + '%';
+                                consoleBox.scrollTop = consoleBox.scrollHeight;
+                            } else if (d.status === 'complete') {
+                                consoleBox.innerHTML += `<span class="text-white">*** INGESTION COMPLETE: ${d.total} POSTS READY ***</span>`;
+                                document.getElementById('chat-box').classList.remove('hidden');
+                                setTimeout(() => document.getElementById('chat-box').style.opacity = '1', 100);
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                consoleBox.innerHTML += `<span class="text-red-500">> Error: ${e.message}</span>`;
+            }
+        }
+
+        async function askQuestion() {
+            const q = document.getElementById('query').value;
+            const history = document.getElementById('history');
+            if(!q) return;
+
+            // User Bubble
+            const u = document.createElement('div');
+            u.className = "ml-auto max-w-xl glass-card p-6 rounded-2xl rounded-tr-none mb-4";
+            u.innerHTML = `<p class="text-sm font-bold text-gray-500 uppercase mb-2">Query</p><p class="text-xl font-light">${q}</p>`;
+            history.appendChild(u);
+            document.getElementById('query').value = "";
+
+            try {
+                const res = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        search_id: document.getElementById('s_id').value,
+                        groq_key: document.getElementById('g_key').value,
+                        question: q
+                    })
+                });
+                const data = await res.json();
+
+                // AI Bubble
+                const a = document.createElement('div');
+                a.className = "mr-auto max-w-2xl bg-blue-900/10 border border-blue-900/30 p-8 rounded-2xl rounded-tl-none mb-4";
+                a.innerHTML = `<p class="text-[9px] font-black text-blue-500 uppercase tracking-widest mb-4">Intelligence Response</p><p class="text-gray-300 leading-relaxed">${data.answer.replace(/\n/g, '<br>')}</p>`;
+                history.appendChild(a);
+                history.scrollTop = history.scrollHeight;
+            } catch (e) {
+                alert("Query Error: " + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
