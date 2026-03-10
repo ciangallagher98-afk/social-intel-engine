@@ -18,7 +18,7 @@ def ingest():
     try:
         data = request.get_json(force=True)
         
-        # FIX: Accept the Hex ID as a string to avoid 'invalid literal for int()' error
+        # Accept Hex ID as string
         s_id = str(data.get('search_id')).strip()
         p_token = data.get('pulsar_token')
         
@@ -26,12 +26,11 @@ def ingest():
         d_from = data.get('from')
         d_to = data.get('to')
 
-        # FLATTENED SCHEMA: Using 'engagements' and analysis fields directly
-        # SORTING: Prioritizing High Visibility (High Reach) posts
+        # NESTED SCHEMA FIX: limit/offset/sort belong to the inner results field
         query = """
         query GetPulsarData($f: FilterInput!) {
-          results(filter: $f, limit: 250, offset: 0, sort: { field: VISIBILITY, order: DESC }) {
-            results {
+          results(filter: $f) {
+            results(limit: 250, offset: 0, sort: { field: VISIBILITY, order: DESC }) {
               content
               source
               visibility
@@ -46,13 +45,12 @@ def ingest():
         
         variables = {
             "f": {
-                "searchIds": [s_id], # Hex strings are valid in list format here
+                "searchIds": [s_id],
                 "dateFrom": d_from,
                 "dateTo": d_to
             }
         }
         
-        # Safety encoding for the request payload
         payload = json.dumps({"query": query, "variables": variables}).encode('utf-8')
         
         r = requests.post(
@@ -68,18 +66,18 @@ def ingest():
         res_json = r.json()
         
         if "errors" in res_json:
-            error_msg = res_json['errors'][0].get('message', 'Unknown GraphQL Error')
+            error_msg = res_json['errors'][0].get('message', 'GraphQL Error')
             return jsonify({"error": error_msg}), 400
 
+        # Extract from nested results: data.results.results
         batch = res_json.get('data', {}).get('results', {}).get('results', [])
         
         if not batch:
             return jsonify({
                 "status": "empty", 
-                "message": "Pulsar returned 0 results. Check your ID and Date range."
+                "message": "Pulsar returned 0 results. Check ID/Dates."
             })
 
-        # Sanitize and save to memory
         for post in batch:
             post['content'] = clean_text(post.get('content', ''))
             
@@ -88,7 +86,7 @@ def ingest():
         return jsonify({
             "status": "success", 
             "count": len(batch),
-            "log": f"Indexed {len(batch)} high-visibility nodes."
+            "log": f"Successfully indexed {len(batch)} visibility-prioritized nodes."
         })
 
     except Exception as e:
@@ -104,11 +102,11 @@ def ask():
 
         dataset = knowledge_base.get(s_id, [])
         if not dataset:
-            return jsonify({"answer": "Error: Knowledge base is empty. Run ingestion first."}), 400
+            return jsonify({"answer": "Error: Knowledge base empty."}), 400
 
-        # Pack visibility-prioritized context for Groq
+        # Pack top 150 most visible posts as context
         context = []
-        for p in dataset[:150]: # Top 150 most visible posts
+        for p in dataset[:150]:
             context.append({
                 "text": p.get('content', '')[:140],
                 "reach": p.get('visibility'),
@@ -121,14 +119,8 @@ def ask():
         chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {
-                    "role": "system", 
-                    "content": "You are Gemini Intelligence. Analyze these high-visibility posts for dominant emotions and core topics. Be strategic."
-                },
-                {
-                    "role": "user", 
-                    "content": f"Prioritized Data: {json.dumps(context)}\n\nQuery: {query}"
-                }
+                {"role": "system", "content": "You are Gemini Intelligence. Analyze these high-visibility posts. Group insights by Emotion and Reach."},
+                {"role": "user", "content": f"Data: {json.dumps(context)}\n\nQuery: {query}"}
             ],
             temperature=0.3
         )
@@ -138,5 +130,4 @@ def ask():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Running on port 5000 for local development
     app.run(port=5000, debug=True)
