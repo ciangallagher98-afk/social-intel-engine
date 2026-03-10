@@ -6,56 +6,42 @@ from groq import Groq
 app = Flask(__name__)
 knowledge_base = {}
 
-def clean_text(text):
+def nuke_invisible_chars(text):
+    """Deep cleans inputs to prevent HTTP header crashes."""
     if not text: return ""
-    return text.replace('\u2028', ' ').replace('\u2029', ' ').encode('utf-8', 'ignore').decode('utf-8')
+    return str(text).replace('\u2028', '').replace('\u2029', '').replace('\n', '').strip()
 
 @app.route('/api/ingest', methods=['POST'])
 def ingest():
     try:
         data = request.get_json(force=True)
-        s_id = str(data.get('search_id')).strip()
-        p_token = data.get('pulsar_token')
         
-        # SCHEMA FIX V3: 
-        # In Pulsar v2, pagination (limit/offset) and sorting are often 
-        # parameters of the FilterInput object or high-level query arguments.
+        # FIX 1: Nuke invisible characters from the UI inputs
+        s_id = nuke_invisible_chars(data.get('search_id'))
+        p_token = nuke_invisible_chars(data.get('pulsar_token'))
+        
+        # FIX 2: The Absolute Simplest GraphQL Query
+        # No limits, no sorting, no nested results. Just the raw data.
         query = """
-        query GetPulsarData($f: FilterInput!, $limit: Int, $offset: Int) {
-          results(filter: $f, limit: $limit, offset: $offset) {
-            results {
-              content
-              source
-              visibility
-              sentiment
-              emotions
-              topics
-            }
+        query GetPulsarData($f: FilterInput!) {
+          results(filter: $f) {
+            content
+            source
+            visibility
+            engagements
+            sentiment
+            emotions
+            topics
           }
         }
         """
         
-        # If the above fails, it's because 'results' is a list that doesn't 
-        # take arguments. We fallback to the most basic fetch:
-        # query = """
-        # query GetPulsarData($f: FilterInput!) {
-        #   results(filter: $f) {
-        #     results {
-        #       content
-        #       visibility
-        #     }
-        #   }
-        # }
-        # """
-
         variables = {
             "f": {
                 "searchIds": [s_id],
                 "dateFrom": data.get('from'),
                 "dateTo": data.get('to')
-            },
-            "limit": 250,
-            "offset": 0
+            }
         }
         
         payload = json.dumps({"query": query, "variables": variables}).encode('utf-8')
@@ -73,16 +59,16 @@ def ingest():
         res_json = r.json()
         
         if "errors" in res_json:
-            # Check if it's still a limit error; if so, we try one more structure
             return jsonify({"error": res_json['errors'][0].get('message')}), 400
 
-        batch = res_json.get('data', {}).get('results', {}).get('results', [])
+        # Based on your exact schema, 'results' contains the array directly
+        batch = res_json.get('data', {}).get('results', [])
         
         if not batch:
-            return jsonify({"status": "empty", "message": "Check search ID/Dates."})
+            return jsonify({"status": "empty", "message": "Zero results. Check ID/Dates."})
 
         for post in batch:
-            post['content'] = clean_text(post.get('content', ''))
+            post['content'] = post.get('content', '').replace('\u2028', ' ').replace('\u2029', ' ')
             
         knowledge_base[s_id] = batch
         return jsonify({"status": "success", "count": len(batch)})
@@ -94,21 +80,21 @@ def ingest():
 def ask():
     try:
         data = request.get_json(force=True)
-        s_id = str(data.get('search_id')).strip()
+        s_id = nuke_invisible_chars(data.get('search_id'))
         query = data.get('question')
-        g_key = data.get('groq_key')
+        g_key = nuke_invisible_chars(data.get('groq_key'))
 
         dataset = knowledge_base.get(s_id, [])
-        if not dataset: return jsonify({"answer": "Knowledge base empty."}), 400
+        if not dataset:
+            return jsonify({"answer": "Error: Knowledge base empty."}), 400
 
-        # Optimization: Send reach and sentiment data to Groq
-        context = [{"t": p.get('content', '')[:120], "v": p.get('visibility')} for p in dataset[:100]]
+        context = [{"text": p.get('content', '')[:140], "r": p.get('visibility'), "s": p.get('sentiment'), "e": p.get('emotions'), "tp": p.get('topics')} for p in dataset[:150]]
             
         client = Groq(api_key=g_key)
         chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "Analyze these social posts based on visibility/reach."},
+                {"role": "system", "content": "You are Gemini Intelligence. Group insights by Emotion and Topic."},
                 {"role": "user", "content": f"Data: {json.dumps(context)}\n\nQuery: {query}"}
             ]
         )
