@@ -55,7 +55,7 @@
                 <div id="chat-ui" class="hidden space-y-6">
                     <div id="history" class="space-y-4 max-h-[400px] overflow-y-auto pr-2"></div>
                     <div class="relative flex items-center">
-                        <input id="query" type="text" placeholder="Analyze the narrative..." class="w-full bg-[#0a0a0c] border border-gray-800 p-5 rounded-2xl text-white outline-none">
+                        <input id="query" type="text" placeholder="Query the posts and articles..." class="w-full bg-[#0a0a0c] border border-gray-800 p-5 rounded-2xl text-white outline-none">
                         <button onclick="ask()" class="absolute right-3 bg-blue-600 px-6 py-2 rounded-xl text-white font-bold text-xs">ASK</button>
                     </div>
                 </div>
@@ -89,7 +89,8 @@
                 });
                 const data = await res.json();
                 if(data.status === "success") {
-                    con.innerHTML += `<div class="text-emerald-400">>> SUCCESS: ${data.count} nodes captured.</div>`;
+                    // TEXT UPDATE HERE
+                    con.innerHTML += `<div class="text-emerald-400">>> SUCCESS: ${data.count} posts/articles captured.</div>`;
                     document.getElementById('chat-ui').classList.remove('hidden');
                     status.innerText = "Online";
                 } else { con.innerHTML += `<div class="text-red-500">>> ERROR: ${data.error || data.message}</div>`; }
@@ -102,17 +103,24 @@
             if(!q) return;
             hist.innerHTML += `<div class="text-right"><span class="bg-blue-900/20 p-3 rounded-lg border border-blue-900/30 text-sm inline-block text-blue-100">${q}</span></div>`;
             document.getElementById('query').value = "";
-            
-            // Auto scroll to bottom
             hist.scrollTop = hist.scrollHeight;
 
-            const res = await fetch('/api/ask', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ search_id: document.getElementById('s_id').value, groq_key: document.getElementById('g_key').value, question: q })
-            });
-            const data = await res.json();
-            hist.innerHTML += `<div class="text-left"><div class="bg-white/5 p-4 rounded-lg border border-white/10 text-sm text-gray-300 leading-relaxed font-light prose prose-invert">${data.answer.replace(/\n/g, '<br>')}</div></div>`;
+            try {
+                const res = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ search_id: document.getElementById('s_id').value, groq_key: document.getElementById('g_key').value, question: q })
+                });
+                
+                const data = await res.json();
+                if (data.error) {
+                    hist.innerHTML += `<div class="text-left"><div class="bg-red-900/20 p-4 rounded-lg border border-red-500/50 text-xs text-red-400 font-mono">LLM_ERROR: ${data.error}</div></div>`;
+                } else {
+                    hist.innerHTML += `<div class="text-left"><div class="bg-white/5 p-4 rounded-lg border border-white/10 text-sm text-gray-300 leading-relaxed font-light prose prose-invert">${data.answer.replace(/\n/g, '<br>')}</div></div>`;
+                }
+            } catch (e) {
+                hist.innerHTML += `<div class="text-left"><div class="bg-red-900/20 p-4 rounded-lg border border-red-500/50 text-xs text-red-400 font-mono">CRITICAL_FAIL: ${e.message}</div></div>`;
+            }
             hist.scrollTop = hist.scrollHeight;
         }
     </script>
