@@ -4,8 +4,6 @@ import json
 from groq import Groq
 
 app = Flask(__name__)
-
-# Persistent in-memory storage for the session
 knowledge_base = {}
 
 def nuke_invisible_chars(text):
@@ -24,11 +22,12 @@ def ingest():
         all_posts = []
         seen_content = set()
         pages_fetched = 0
+        
+        # INGESTION LIMIT: Increase this if you want more than 1,000 posts in memory.
+        # Example: 100 pages * 50 = 5,000 posts.
         max_pages = 20 
         
         while pages_fetched < max_pages:
-            
-            # GRAPHQL UPDATE: Added 'url' to the requested fields
             query = """
             query GetPulsarData($f: FilterInput!) {
               results(filter: $f) {
@@ -56,7 +55,6 @@ def ingest():
             }
             
             payload = json.dumps({"query": query, "variables": variables}).encode('utf-8')
-            
             r = requests.post(
                 "https://data.pulsarplatform.com/graphql/trac",
                 data=payload,
@@ -68,12 +66,10 @@ def ingest():
             )
             
             res_json = r.json()
-            
             if "errors" in res_json:
                 return jsonify({"error": res_json['errors'][0].get('message')}), 400
 
             batch = res_json.get('data', {}).get('results', {}).get('results', [])
-            
             if not batch:
                 break 
 
@@ -90,10 +86,7 @@ def ingest():
                     all_posts.append(post)
                     added_this_round += 1
             
-            if len(batch) < 50:
-                break
-                
-            if added_this_round == 0 or not last_timestamp:
+            if len(batch) < 50 or added_this_round == 0 or not last_timestamp:
                 break
                 
             current_date_to = last_timestamp
@@ -122,26 +115,26 @@ def ask():
 
         sorted_dataset = sorted(dataset, key=lambda x: x.get('visibility', 0), reverse=True)
 
-        # CONTEXT UPDATE: We now package the URL with the text so the LLM can cite it
+        # AI CONTEXT UPDATE: Included 'publishedAt' as 'date' so the AI understands timeframes.
         context = [
             {
                 "text": p.get('content', '')[:100], 
                 "url": p.get('url', 'No URL'),
+                "date": p.get('publishedAt'),
                 "visibility": p.get('visibility'), 
                 "sentiment": p.get('sentiment'), 
                 "emotion": p.get('emotion')
             } for p in sorted_dataset[:50]
         ]
             
-        # SYSTEM PROMPT UPDATE: Strict instructions for citations and Boolean generation
         system_prompt = """
-        You are a strategic intelligence analyst. Analyze the provided social media data objectively.
+        You are a strategic intelligence analyst. Analyze the provided social media posts and articles objectively.
         
         Follow these strict rules:
-        1. Answer the user's query directly using Markdown.
-        2. When identifying a trend, narrative, or piece of analysis, provide 1-2 exact URLs from the provided data as 'Sample Evidence' linked in your response.
-        3. Conclude your response with a 'Suggested Boolean Filter'. Write a standard boolean query (using AND, OR, "exact match") based on the keywords and narratives you identified, which the user can copy-paste into their tracking platform to monitor this specific trend.
-        4. Do NOT group by emotion or sentiment unless asked.
+        1. Answer the user's query directly using Markdown. If they ask about a specific timeframe, reference the 'date' field.
+        2. Provide 1-2 exact URLs from the data as 'Sample Evidence' linked in your response to back up your claims.
+        3. Conclude with a 'Suggested Boolean Filter'. Write a standard boolean query (e.g., ("keyword1" OR "keyword2") AND "topic") based on your analysis, which the user can copy-paste into their tracking platform.
+        4. Do NOT group by emotion or sentiment unless explicitly asked.
         """
 
         client = Groq(api_key=g_key)
