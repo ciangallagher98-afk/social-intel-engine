@@ -9,7 +9,6 @@ app = Flask(__name__)
 knowledge_base = {}
 
 def nuke_invisible_chars(text):
-    """Deep cleans inputs to prevent HTTP header crashes from UI copy-pastes."""
     if not text: return ""
     return str(text).replace('\u2028', '').replace('\u2029', '').replace('\n', '').strip()
 
@@ -17,28 +16,25 @@ def nuke_invisible_chars(text):
 def ingest():
     try:
         data = request.get_json(force=True)
-        
-        # 1. Clean UI Inputs
         s_id = nuke_invisible_chars(data.get('search_id'))
         p_token = nuke_invisible_chars(data.get('pulsar_token'))
-        
-        # 2. Setup Sliding Window Pagination Variables
         d_from = data.get('from')
         current_date_to = data.get('to')
         
         all_posts = []
         seen_content = set()
         pages_fetched = 0
-        max_pages = 20 # Collects up to 1,000 posts (50 posts * 20 pages)
+        max_pages = 20 
         
         while pages_fetched < max_pages:
             
-            # The naked query with 'publishedAt' for time-sliding
+            # GRAPHQL UPDATE: Added 'url' to the requested fields
             query = """
             query GetPulsarData($f: FilterInput!) {
               results(filter: $f) {
                 results {
                   content
+                  url
                   source
                   visibility
                   engagement
@@ -79,7 +75,7 @@ def ingest():
             batch = res_json.get('data', {}).get('results', {}).get('results', [])
             
             if not batch:
-                break # End of timeline
+                break 
 
             added_this_round = 0
             last_timestamp = None
@@ -88,21 +84,18 @@ def ingest():
                 content = post.get('content', '')
                 last_timestamp = post.get('publishedAt')
                 
-                # Deduplicate exact matches
                 if content not in seen_content:
                     seen_content.add(content)
                     post['content'] = content.replace('\u2028', ' ').replace('\u2029', ' ')
                     all_posts.append(post)
                     added_this_round += 1
             
-            # Pulsar max batch is 50. Less means we hit the end.
             if len(batch) < 50:
                 break
                 
             if added_this_round == 0 or not last_timestamp:
                 break
                 
-            # Slide the window ceiling
             current_date_to = last_timestamp
             pages_fetched += 1
 
@@ -127,31 +120,36 @@ def ask():
         if not dataset:
             return jsonify({"error": "Knowledge base empty. Run ingestion first."}), 400
 
-        # Sort the accumulated posts by visibility
         sorted_dataset = sorted(dataset, key=lambda x: x.get('visibility', 0), reverse=True)
 
-        # AI Context mapping: Reverted 'reach' back to 'visibility' to align with Pulsar's native naming
+        # CONTEXT UPDATE: We now package the URL with the text so the LLM can cite it
         context = [
             {
                 "text": p.get('content', '')[:100], 
+                "url": p.get('url', 'No URL'),
                 "visibility": p.get('visibility'), 
                 "sentiment": p.get('sentiment'), 
                 "emotion": p.get('emotion')
             } for p in sorted_dataset[:50]
         ]
             
+        # SYSTEM PROMPT UPDATE: Strict instructions for citations and Boolean generation
+        system_prompt = """
+        You are a strategic intelligence analyst. Analyze the provided social media data objectively.
+        
+        Follow these strict rules:
+        1. Answer the user's query directly using Markdown.
+        2. When identifying a trend, narrative, or piece of analysis, provide 1-2 exact URLs from the provided data as 'Sample Evidence' linked in your response.
+        3. Conclude your response with a 'Suggested Boolean Filter'. Write a standard boolean query (using AND, OR, "exact match") based on the keywords and narratives you identified, which the user can copy-paste into their tracking platform to monitor this specific trend.
+        4. Do NOT group by emotion or sentiment unless asked.
+        """
+
         client = Groq(api_key=g_key)
         chat = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {
-                    "role": "system", 
-                    "content": "You are a strategic intelligence analyst. You are analyzing social media posts prioritized by their 'visibility' score. Answer the user's query directly and objectively using Markdown. Do NOT group your analysis by emotion or sentiment unless the user explicitly asks you to."
-                },
-                {
-                    "role": "user", 
-                    "content": f"Data: {json.dumps(context)}\n\nQuery: {query}"
-                }
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Data: {json.dumps(context)}\n\nQuery: {query}"}
             ],
             temperature=0.3
         )
